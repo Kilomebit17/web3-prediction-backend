@@ -3,7 +3,7 @@ FROM node:22-alpine AS deps
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN npm install -g pnpm@9
 
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/api/package.json ./apps/api/
@@ -42,7 +42,7 @@ USER app
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD wget -qO- http://localhost:3000/healthz || exit 1
+  CMD node -e "require('http').get('http://localhost:3000/healthz',r=>{process.exit(r.statusCode===200?0:1)})"
 
 # Entrypoint script decides API vs Worker based on SERVICE_TYPE env var
 COPY --chown=app:nodejs docker/entrypoint.sh /app/entrypoint.sh

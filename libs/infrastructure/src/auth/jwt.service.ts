@@ -53,6 +53,14 @@ export class JwtService implements OnModuleInit, IAuthTokenService {
   }
 
   async onModuleInit(): Promise<void> {
+    // Prefer raw keys from env vars (Railway-compatible, base64-encoded)
+    if (process.env.JWT_PRIVATE_KEY && process.env.JWT_PUBLIC_KEY) {
+      this.privateKey = Buffer.from(process.env.JWT_PRIVATE_KEY, 'base64').toString('utf-8');
+      this.publicKey = Buffer.from(process.env.JWT_PUBLIC_KEY, 'base64').toString('utf-8');
+      return;
+    }
+
+    // Fallback: read from file paths (local dev / Docker with mounted volumes)
     const privateKeyPath = process.env.JWT_PRIVATE_KEY_PATH ?? './secrets/jwt.private.pem';
     const publicKeyPath = process.env.JWT_PUBLIC_KEY_PATH ?? './secrets/jwt.public.pem';
 

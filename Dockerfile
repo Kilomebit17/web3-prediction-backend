@@ -43,18 +43,10 @@ COPY --from=builder --chown=app:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=app:nodejs /app/apps/api/package.json ./apps/api/package.json
 COPY --from=builder --chown=app:nodejs /app/apps/worker/dist ./apps/worker/dist
 COPY --from=builder --chown=app:nodejs /app/apps/worker/package.json ./apps/worker/package.json
-COPY --from=builder --chown=app:nodejs /app/libs ./libs
 COPY --from=builder --chown=app:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=app:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=builder --chown=app:nodejs /app/.npmrc ./.npmrc
 COPY --from=builder --chown=app:nodejs /app/package.json ./
-
-RUN mkdir -p node_modules/@pred && \
-    ln -sf ../../libs/domain node_modules/@pred/domain && \
-    ln -sf ../../libs/application node_modules/@pred/application && \
-    ln -sf ../../libs/infrastructure node_modules/@pred/infrastructure && \
-    ln -sf ../../libs/shared node_modules/@pred/shared && \
-    chown -R app:nodejs node_modules/@pred
 
 USER app
 

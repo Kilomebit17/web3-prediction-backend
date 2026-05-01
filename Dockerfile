@@ -49,6 +49,13 @@ COPY --from=builder --chown=app:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace
 COPY --from=builder --chown=app:nodejs /app/.npmrc ./.npmrc
 COPY --from=builder --chown=app:nodejs /app/package.json ./
 
+RUN mkdir -p node_modules/@pred && \
+    ln -sf ../../libs/domain node_modules/@pred/domain && \
+    ln -sf ../../libs/application node_modules/@pred/application && \
+    ln -sf ../../libs/infrastructure node_modules/@pred/infrastructure && \
+    ln -sf ../../libs/shared node_modules/@pred/shared && \
+    chown -R app:nodejs node_modules/@pred
+
 USER app
 
 EXPOSE 3000

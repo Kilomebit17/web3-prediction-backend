@@ -2,7 +2,7 @@
 set -e
 
 echo "Running database migrations..."
-npx prisma migrate deploy
+prisma migrate deploy
 
 if [ "$SERVICE_TYPE" = "worker" ]; then
   echo "Starting Worker..."

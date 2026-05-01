@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "paths": {
+      "@pred/domain": ["../../libs/domain/src/index.ts"],
+      "@pred/domain/*": ["../../libs/domain/src/*"],
+      "@pred/application": ["../../libs/application/src/index.ts"],
+      "@pred/application/*": ["../../libs/application/src/*"],
+      "@pred/infrastructure": ["../../libs/infrastructure/src/index.ts"],
+      "@pred/infrastructure/*": ["../../libs/infrastructure/src/*"],
+      "@pred/shared": ["../../libs/shared/src/index.ts"],
+      "@pred/shared/*": ["../../libs/shared/src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

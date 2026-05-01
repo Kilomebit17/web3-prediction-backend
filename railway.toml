@@ -1,0 +1,39 @@
+[build]
+  builder = "DOCKERFILE"
+
+# ── Environment variables set via Railway dashboard or `railway variables` ────
+# Required:
+#   DATABASE_URL    – Railway auto-provides when PostgreSQL plugin is added
+#   REDIS_URL       – Railway auto-provides when Redis plugin is added
+#   TELEGRAM_BOT_TOKEN
+#
+# JWT keys — generate and store as Railway shared variables:
+#   JWT_PRIVATE_KEY_PATH=/app/secrets/jwt.private.pem
+#   JWT_PUBLIC_KEY_PATH=/app/secrets/jwt.public.pem
+#   (Copy key files via Railway's "Custom Files" or mount a volume)
+#
+# Alternatively, update JwtService to accept JWT_PRIVATE_KEY / JWT_PUBLIC_KEY
+# as base64-encoded env vars instead of file paths.
+#
+# See .env.example for all available variables.
+
+# ── Deploy ─────────────────────────────────────────────────────────────────────
+
+[deploy]
+  numReplicas = 1
+  restartPolicyMaxRetries = 3
+
+# ── Services ───────────────────────────────────────────────────────────────────
+# Railway supports multiple services per project.
+# Define them in the dashboard under the same project.
+
+# Service 1: API
+#   Root Directory: /
+#   Start Command: (handled by Dockerfile ENTRYPOINT, SERVICE_TYPE=api)
+#   Healthcheck Path: /healthz
+#   Port: 3000
+
+# Service 2: Worker
+#   Root Directory: /
+#   Start Command: (handled by Dockerfile ENTRYPOINT, SERVICE_TYPE=worker)
+#   No public port needed

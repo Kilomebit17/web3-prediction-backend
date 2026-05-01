@@ -1,0 +1,39 @@
+{
+  "name": "pred-backend",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "pnpm --filter @pred/api build && pnpm --filter @pred/worker build",
+    "start:dev": "pnpm --filter @pred/api start:dev",
+    "start:worker": "pnpm --filter @pred/worker start:dev",
+    "lint": "eslint \"{apps,libs}/**/*.ts\"",
+    "lint:fix": "eslint \"{apps,libs}/**/*.ts\" --fix",
+    "format": "prettier --write \"{apps,libs}/**/*.ts\"",
+    "format:check": "prettier --check \"{apps,libs}/**/*.ts\"",
+    "test": "pnpm --filter @pred/api test",
+    "test:integration": "pnpm --filter @pred/api test:integration",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "prisma:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "prisma:studio": "prisma studio"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.15.0",
+    "@typescript-eslint/parser": "^8.15.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-boundaries": "^5.0.0",
+    "prettier": "^3.3.3",
+    "prisma": "^5.22.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  }
+}

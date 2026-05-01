@@ -1,0 +1,438 @@
+// ROADMAP §2.2: Full Prisma schema — all 16 tables
+// Task 0.4 / 1.3 — initial schema + full catalog
+// NOTE: Partial unique / CHECK constraints added via raw SQL migration below
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── ENUMS ────────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  user
+  moderator
+  admin
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  active
+  banned
+  frozen
+
+  @@map("user_status")
+}
+
+enum BetStatus {
+  active
+  won
+  lost
+  cancelled
+
+  @@map("bet_status")
+}
+
+enum BetDirection {
+  up
+  down
+
+  @@map("bet_direction")
+}
+
+enum TransactionType {
+  bet_placed
+  bet_won
+  bet_refund
+  subscription_purchase
+  deposit
+  withdrawal
+  referral_bonus
+  airdrop
+  admin_adjustment
+
+  @@map("transaction_type")
+}
+
+enum PaymentProvider {
+  stripe
+  telegram_stars
+  ton
+
+  @@map("payment_provider")
+}
+
+enum PaymentIntentStatus {
+  pending
+  completed
+  failed
+  expired
+  refunded
+
+  @@map("payment_intent_status")
+}
+
+enum SubscriptionCategory {
+  rounds
+  multipliers
+  passes
+  utility
+
+  @@map("subscription_category")
+}
+
+enum Chain {
+  ton
+  eth
+  bsc
+  polygon
+  solana
+
+  @@map("chain")
+}
+
+// ─── TABLE 1: users ───────────────────────────────────────────────────────────
+
+model User {
+  id               String     @id @default(uuid()) @db.Uuid
+  telegramId       BigInt     @unique @map("telegram_id")
+  telegramUsername String?    @map("telegram_username") @db.VarChar(64)
+  firstName        String?    @map("first_name") @db.VarChar(128)
+  lastName         String?    @map("last_name") @db.VarChar(128)
+  languageCode     String?    @map("language_code") @db.VarChar(8)
+  isPremium        Boolean    @default(false) @map("is_premium")
+  photoUrl         String?    @map("photo_url") @db.VarChar(512)
+  allowsWriteToPm  Boolean    @default(false) @map("allows_write_to_pm")
+
+  username         String?    @unique @db.VarChar(32)
+  balance          Decimal    @default(1000) @db.Decimal(20, 4)
+  totalWins        Int        @default(0) @map("total_wins")
+  totalLosses      Int        @default(0) @map("total_losses")
+  bestWinStreak    Int        @default(0) @map("best_win_streak")
+  score            BigInt     @default(0)
+
+  referralCode     String     @unique @map("referral_code") @db.VarChar(16)
+  referredById     String?    @map("referred_by_id") @db.Uuid
+  referredBy       User?      @relation("UserReferrals", fields: [referredById], references: [id])
+  invitees         User[]     @relation("UserReferrals")
+
+  role             UserRole   @default(user)
+  status           UserStatus @default(active)
+
+  createdAt        DateTime   @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime   @updatedAt @map("updated_at") @db.Timestamptz
+  lastLoginAt      DateTime?  @map("last_login_at") @db.Timestamptz
+
+  wallets            Wallet[]
+  bets               Bet[]
+  subscriptions      UserSubscription[]
+  transactions       Transaction[]
+  referralsGiven     Referral[]           @relation("ReferrerRelation")
+  referralReceived   Referral?            @relation("ReferredRelation")
+  leaderboardEntries LeaderboardSnapshot[]
+  paymentIntents     PaymentIntent[]
+  auditLogs          AuditLog[]
+
+  // ROADMAP §2.2.1 — required indexes
+  @@index([score(sort: Desc)])
+  @@index([telegramUsername])
+  @@index([referredById])
+  @@map("users")
+}
+
+// ─── TABLE 2: wallets ─────────────────────────────────────────────────────────
+
+model Wallet {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  address   String   @db.VarChar(256)
+  chain     Chain
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([address, chain])
+  @@index([userId])
+  @@map("wallets")
+}
+
+// ─── TABLE 3: coins ───────────────────────────────────────────────────────────
+
+model Coin {
+  id            String   @id @db.VarChar(32)
+  symbol        String   @db.VarChar(16)
+  name          String   @db.VarChar(64)
+  binanceSymbol String   @map("binance_symbol") @db.VarChar(32)
+  iconUrl       String?  @map("icon_url") @db.VarChar(512)
+  color         String?  @db.VarChar(16)
+  isActive      Boolean  @default(true) @map("is_active")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  bets    Bet[]
+  candles PriceCandle[]
+
+  @@map("coins")
+}
+
+// ─── TABLE 4: bets ────────────────────────────────────────────────────────────
+
+model Bet {
+  id                 String       @id @default(uuid()) @db.Uuid
+  userId             String       @map("user_id") @db.Uuid
+  coinId             String       @map("coin_id") @db.VarChar(32)
+  direction          BetDirection
+  amount             Decimal      @db.Decimal(20, 4)
+  multiplier         Int
+  liquidationPercent Int          @map("liquidation_percent")
+  durationSeconds    Int          @map("duration_seconds")
+  entryPrice         Decimal      @map("entry_price") @db.Decimal(30, 8)
+  endPrice           Decimal?     @map("end_price") @db.Decimal(30, 8)
+  status             BetStatus    @default(active)
+  netWinAmount       Decimal?     @map("net_win_amount") @db.Decimal(20, 4)
+  placedAt           DateTime     @default(now()) @map("placed_at") @db.Timestamptz
+  expiresAt          DateTime     @map("expires_at") @db.Timestamptz
+  resolvedAt         DateTime?    @map("resolved_at") @db.Timestamptz
+
+  user   User       @relation(fields: [userId], references: [id])
+  coin   Coin       @relation(fields: [coinId], references: [id])
+  events BetEvent[]
+
+  // ROADMAP §2.2.2 — partial index for active bets handled in raw SQL migration
+  @@index([userId, status])
+  @@index([expiresAt])
+  @@index([userId, placedAt(sort: Desc)])
+  @@map("bets")
+}
+
+// ─── TABLE 5: bet_events ──────────────────────────────────────────────────────
+
+model BetEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  betId     String   @map("bet_id") @db.Uuid
+  type      String   @db.VarChar(32)
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  bet Bet @relation(fields: [betId], references: [id])
+
+  @@index([betId, createdAt])
+  @@map("bet_events")
+}
+
+// ─── TABLE 6: subscriptions ───────────────────────────────────────────────────
+
+model Subscription {
+  id          String               @id @db.VarChar(64)
+  category    SubscriptionCategory
+  name        String               @db.VarChar(128)
+  description String               @db.Text
+  isVipOnly   Boolean              @default(false) @map("is_vip_only")
+  isPermanent Boolean              @default(false) @map("is_permanent")
+  badge       String?              @db.VarChar(32)
+  accentColor String?              @map("accent_color") @db.VarChar(32)
+  burnPercent Int                  @map("burn_percent")
+  isActive    Boolean              @default(true) @map("is_active")
+  sortOrder   Int                  @default(0) @map("sort_order")
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz
+
+  tiers    SubscriptionTier[]
+  userSubs UserSubscription[]
+
+  @@index([category])
+  @@map("subscriptions")
+}
+
+// ─── TABLE 7: subscription_tiers ─────────────────────────────────────────────
+
+model SubscriptionTier {
+  id             String       @id @default(uuid()) @db.Uuid
+  subscriptionId String       @map("subscription_id") @db.VarChar(64)
+  durationDays   Int?         @map("duration_days")
+  price          Decimal      @db.Decimal(20, 4)
+  burnAmount     Decimal      @map("burn_amount") @db.Decimal(20, 4)
+  label          String       @db.VarChar(32)
+  createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
+
+  subscription Subscription       @relation(fields: [subscriptionId], references: [id])
+  userSubs     UserSubscription[]
+
+  @@unique([subscriptionId, durationDays])
+  @@map("subscription_tiers")
+}
+
+// ─── TABLE 8: user_subscriptions ─────────────────────────────────────────────
+
+model UserSubscription {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  subscriptionId String    @map("subscription_id") @db.VarChar(64)
+  tierId         String    @map("tier_id") @db.Uuid
+  isActive       Boolean   @default(true) @map("is_active")
+  activatedAt    DateTime  @default(now()) @map("activated_at") @db.Timestamptz
+  expiresAt      DateTime? @map("expires_at") @db.Timestamptz
+
+  user         User             @relation(fields: [userId], references: [id])
+  subscription Subscription     @relation(fields: [subscriptionId], references: [id])
+  tier         SubscriptionTier @relation(fields: [tierId], references: [id])
+
+  // ROADMAP §2.2.2: partial UNIQUE(user_id, subscription_id) WHERE is_active=true
+  // → added in raw SQL migration (Prisma does not support partial unique indexes)
+  @@index([userId, subscriptionId])
+  @@index([expiresAt])
+  @@map("user_subscriptions")
+}
+
+// ─── TABLE 9: transactions ────────────────────────────────────────────────────
+
+model Transaction {
+  id             String          @id @default(uuid()) @db.Uuid
+  userId         String          @map("user_id") @db.Uuid
+  type           TransactionType
+  amount         Decimal         @db.Decimal(20, 4)
+  balanceAfter   Decimal         @map("balance_after") @db.Decimal(20, 4)
+  // Polymorphic reference — referenceType discriminates the entity type
+  referenceType  String?         @map("reference_type") @db.VarChar(32)
+  referenceId    String?         @map("reference_id") @db.VarChar(64)
+  idempotencyKey String?         @unique @map("idempotency_key") @db.VarChar(256)
+  metadata       Json            @default("{}")
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([referenceType, referenceId])
+  @@map("transactions")
+}
+
+// ─── TABLE 10: referrals ─────────────────────────────────────────────────────
+
+model Referral {
+  id           String   @id @default(uuid()) @db.Uuid
+  referrerId   String   @map("referrer_id") @db.Uuid
+  referredId   String   @unique @map("referred_id") @db.Uuid
+  totalEarned  Decimal  @default(0) @map("total_earned") @db.Decimal(20, 4)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  referrer User @relation("ReferrerRelation", fields: [referrerId], references: [id])
+  referred User @relation("ReferredRelation", fields: [referredId], references: [id])
+
+  @@index([referrerId])
+  @@map("referrals")
+}
+
+// ─── TABLE 11: leaderboard_snapshots ─────────────────────────────────────────
+
+model LeaderboardSnapshot {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  period    String   @db.VarChar(16)
+  position  Int
+  score     BigInt
+  balance   Decimal  @db.Decimal(20, 4)
+  snappedAt DateTime @default(now()) @map("snapped_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([period, position])
+  @@index([userId, period])
+  @@map("leaderboard_snapshots")
+}
+
+// ─── TABLE 12: ranks ─────────────────────────────────────────────────────────
+
+model Rank {
+  id         String   @id @db.VarChar(16)
+  name       String   @db.VarChar(32)
+  minBalance Decimal  @map("min_balance") @db.Decimal(20, 4)
+  tierOrder  Int      @map("tier_order")
+  iconUrl    String?  @map("icon_url") @db.VarChar(512)
+  gifUrl     String?  @map("gif_url") @db.VarChar(512)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("ranks")
+}
+
+// ─── TABLE 13: deposit_packages ──────────────────────────────────────────────
+
+model DepositPackage {
+  id           String   @id @default(uuid()) @db.Uuid
+  amount       Decimal  @db.Decimal(20, 4)
+  bonusAmount  Decimal  @map("bonus_amount") @db.Decimal(20, 4)
+  bonusPercent Int      @map("bonus_percent")
+  priceUsd     Decimal  @map("price_usd") @db.Decimal(10, 2)
+  tag          String?  @db.VarChar(32)
+  isActive     Boolean  @default(true) @map("is_active")
+  sortOrder    Int      @default(0) @map("sort_order")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  paymentIntents PaymentIntent[]
+
+  @@map("deposit_packages")
+}
+
+// ─── TABLE 14: payment_intents ────────────────────────────────────────────────
+
+model PaymentIntent {
+  id               String              @id @default(uuid()) @db.Uuid
+  userId           String              @map("user_id") @db.Uuid
+  packageId        String              @map("package_id") @db.Uuid
+  provider         PaymentProvider
+  providerIntentId String?             @map("provider_intent_id") @db.VarChar(256)
+  status           PaymentIntentStatus @default(pending)
+  amountUsd        Decimal             @map("amount_usd") @db.Decimal(10, 2)
+  predAmount       Decimal             @map("pred_amount") @db.Decimal(20, 4)
+  idempotencyKey   String?             @unique @map("idempotency_key") @db.VarChar(256)
+  metadata         Json                @default("{}")
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  completedAt      DateTime?           @map("completed_at") @db.Timestamptz
+
+  user    User           @relation(fields: [userId], references: [id])
+  package DepositPackage @relation(fields: [packageId], references: [id])
+
+  @@unique([provider, providerIntentId])
+  @@map("payment_intents")
+}
+
+// ─── TABLE 15: price_candles ─────────────────────────────────────────────────
+
+model PriceCandle {
+  coinId    String   @map("coin_id") @db.VarChar(32)
+  interval  String   @db.VarChar(8)
+  openTime  DateTime @map("open_time") @db.Timestamptz
+  open      Decimal  @db.Decimal(30, 8)
+  high      Decimal  @db.Decimal(30, 8)
+  low       Decimal  @db.Decimal(30, 8)
+  close     Decimal  @db.Decimal(30, 8)
+  volume    Decimal  @db.Decimal(30, 8)
+  closeTime DateTime @map("close_time") @db.Timestamptz
+
+  coin Coin @relation(fields: [coinId], references: [id])
+
+  @@id([coinId, interval, openTime])
+  @@map("price_candles")
+}
+
+// ─── TABLE 16: audit_log ─────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String   @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(64)
+  targetType String?  @map("target_type") @db.VarChar(32)
+  targetId   String?  @map("target_id") @db.VarChar(64)
+  payload    Json     @default("{}")
+  ipAddress  String?  @map("ip_address") @db.VarChar(64)
+  userAgent  String?  @map("user_agent") @db.VarChar(512)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@map("audit_log")
+}

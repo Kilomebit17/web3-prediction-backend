@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "paths": {
+      "@pred/domain": ["../domain/src/index.ts"],
+      "@pred/domain/*": ["../domain/src/*"],
+      "@pred/shared": ["../shared/src/index.ts"],
+      "@pred/shared/*": ["../shared/src/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"]
+}

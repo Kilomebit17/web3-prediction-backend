@@ -1,0 +1,51 @@
+# ── Stage: deps ──────────────────────────────────────────────────────────────
+FROM node:22-alpine AS deps
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY apps/api/package.json ./apps/api/
+COPY apps/worker/package.json ./apps/worker/
+COPY libs/domain/package.json ./libs/domain/
+COPY libs/application/package.json ./libs/application/
+COPY libs/infrastructure/package.json ./libs/infrastructure/
+COPY libs/shared/package.json ./libs/shared/
+
+RUN pnpm install --frozen-lockfile
+
+# ── Stage: builder ────────────────────────────────────────────────────────────
+FROM deps AS builder
+
+COPY . .
+
+RUN pnpm prisma:generate
+RUN pnpm --filter @pred/api build
+RUN pnpm --filter @pred/worker build
+
+# ── Stage: production ─────────────────────────────────────────────────────────
+FROM node:22-alpine AS production
+
+WORKDIR /app
+
+RUN addgroup -g 1001 -S nodejs && adduser -S app -u 1001
+
+COPY --from=builder --chown=app:nodejs /app/node_modules ./node_modules
+COPY --from=builder --chown=app:nodejs /app/apps/api/dist ./apps/api/dist
+COPY --from=builder --chown=app:nodejs /app/apps/worker/dist ./apps/worker/dist
+COPY --from=builder --chown=app:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=app:nodejs /app/package.json ./
+
+USER app
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD wget -qO- http://localhost:3000/healthz || exit 1
+
+# Entrypoint script decides API vs Worker based on SERVICE_TYPE env var
+COPY --chown=app:nodejs docker/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+ENTRYPOINT ["/app/entrypoint.sh"]

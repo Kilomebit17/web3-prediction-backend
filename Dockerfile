@@ -31,6 +31,8 @@ WORKDIR /app
 
 RUN addgroup -g 1001 -S nodejs && adduser -S app -u 1001
 
+RUN npm install -g pnpm@9
+
 COPY --from=builder --chown=app:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=app:nodejs /app/apps/api/dist ./apps/api/dist
 COPY --from=builder --chown=app:nodejs /app/apps/worker/dist ./apps/worker/dist

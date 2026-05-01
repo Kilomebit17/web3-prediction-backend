@@ -5,7 +5,7 @@ WORKDIR /app
 
 RUN npm install -g pnpm@9
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml .npmrc ./
 COPY apps/api/package.json ./apps/api/
 COPY apps/worker/package.json ./apps/worker/
 COPY libs/domain/package.json ./libs/domain/
@@ -45,6 +45,7 @@ COPY --from=builder --chown=app:nodejs /app/apps/worker/package.json ./apps/work
 COPY --from=builder --chown=app:nodejs /app/libs ./libs
 COPY --from=builder --chown=app:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=app:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=builder --chown=app:nodejs /app/.npmrc ./.npmrc
 COPY --from=builder --chown=app:nodejs /app/package.json ./
 
 USER app

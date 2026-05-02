@@ -25,6 +25,11 @@ RUN pnpm prisma:generate
 RUN pnpm --filter @pred/api build
 RUN pnpm --filter @pred/worker build
 
+RUN for lib in domain application infrastructure shared; do \
+      echo "module.exports = require('./src');" > apps/api/dist/libs/$lib/index.js && \
+      echo "module.exports = require('./src');" > apps/worker/dist/libs/$lib/index.js; \
+    done
+
 # ── Stage: production ─────────────────────────────────────────────────────────
 FROM node:22-alpine AS production
 

@@ -4,6 +4,11 @@ set -e
 echo "Running database migrations..."
 prisma migrate deploy
 
+if [ "$SEED_DB" = "true" ]; then
+  echo "Running database seed..."
+  exec node prisma/seed.js
+fi
+
 # Create workspace symlinks pointing to compiled dist (not TypeScript source)
 if [ "$SERVICE_TYPE" = "worker" ]; then
   DIST="apps/worker/dist"

@@ -6,7 +6,7 @@ prisma migrate deploy
 
 if [ "$SEED_DB" = "true" ]; then
   echo "Running database seed..."
-  exec node prisma/seed.js
+  node prisma/seed.js
 fi
 
 # Create workspace symlinks pointing to compiled dist (not TypeScript source)

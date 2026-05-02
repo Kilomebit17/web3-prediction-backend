@@ -33,12 +33,13 @@ async function bootstrap(): Promise<void> {
   const env = process.env.NODE_ENV ?? 'development';
 
   const swaggerPath = env === 'production' ? 'internal/docs' : 'docs';
+  const serverUrl = process.env.PUBLIC_URL ?? `http://localhost:${port}`;
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Pred.game API')
     .setDescription('Web3 Prediction Game — $PRED backend API')
     .setVersion('1.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
-    .addServer(`http://localhost:${port}`)
+    .addServer(serverUrl)
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup(swaggerPath, app, document);

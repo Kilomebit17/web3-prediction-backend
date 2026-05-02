@@ -44,6 +44,7 @@ export interface AuthenticateWithTelegramOutput {
 export class AuthenticateWithTelegramUseCase {
   private readonly initialBalance: number;
   private readonly antiReplayEnabled: boolean;
+  private readonly replayTTL: number;
 
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
@@ -56,6 +57,7 @@ export class AuthenticateWithTelegramUseCase {
   ) {
     this.initialBalance = parseInt(process.env.INITIAL_BALANCE ?? '1000', 10);
     this.antiReplayEnabled = process.env.TELEGRAM_ANTIREPLAY_ENABLED !== 'false';
+    this.replayTTL = parseInt(process.env.TELEGRAM_FRESH_INITDATA_TTL ?? '60', 10);
   }
 
   async execute(
@@ -148,13 +150,9 @@ export class AuthenticateWithTelegramUseCase {
       return { user, isNewUser };
     });
 
-    // 5. Anti-replay: mark hash as used
+    // 5. Anti-replay: mark hash as used (short TTL — only prevents rapid replay)
     if (this.antiReplayEnabled) {
-      const authDataTTL = parseInt(
-        process.env.TELEGRAM_AUTH_DATA_TTL ?? '86400',
-        10,
-      );
-      await this.cache.set(replayKey, '1', authDataTTL);
+      await this.cache.set(replayKey, '1', this.replayTTL);
     }
 
     // 6. Issue tokens

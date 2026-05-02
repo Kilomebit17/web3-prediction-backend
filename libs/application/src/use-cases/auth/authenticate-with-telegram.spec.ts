@@ -148,6 +148,7 @@ beforeEach(() => {
   process.env.INITIAL_BALANCE = '1000';
   process.env.TELEGRAM_ANTIREPLAY_ENABLED = 'true';
   process.env.TELEGRAM_AUTH_DATA_TTL = '86400';
+  process.env.TELEGRAM_FRESH_INITDATA_TTL = '60';
 });
 
 describe('AuthenticateWithTelegramUseCase', () => {
@@ -185,11 +186,11 @@ describe('AuthenticateWithTelegramUseCase', () => {
       expect.any(UserRegistered),
     );
 
-    // Anti-replay set
+    // Anti-replay set with short TTL (prevents rapid replay, not re-auth)
     expect(mocks.cache.set).toHaveBeenCalledWith(
       'tma:used_hash:abc123hash',
       '1',
-      86400,
+      60,
     );
   });
 

@@ -65,17 +65,41 @@ export class AuthenticateWithTelegramUseCase {
   ): Promise<AuthenticateWithTelegramOutput> {
     // 1. Verify initData
     const parsed = this.verifier.verify(input.initDataRaw);
+    const tgId = BigInt(parsed.user.id);
 
-    // 2. Anti-replay check
+    // 2. Check if this initData was already seen
     const replayKey = `tma:used_hash:${parsed.hash}`;
-    if (this.antiReplayEnabled) {
-      const alreadyUsed = await this.cache.exists(replayKey);
-      if (alreadyUsed) {
-        throw Object.assign(
-          new Error('Telegram initData replay detected'),
-          { code: 'AUTH_DATA_EXPIRED' },
+    const alreadyUsed = this.antiReplayEnabled
+      ? await this.cache.exists(replayKey)
+      : false;
+
+    if (alreadyUsed) {
+      // Idempotent: same initData → find user and issue fresh tokens
+      const user = await this.userRepo.findByTelegramId(tgId);
+
+      if (user) {
+        if (user.status === 'banned') {
+          throw Object.assign(new Error('User is banned'), {
+            code: 'USER_BANNED',
+          });
+        }
+
+        const tokens = await this.tokenService.issueTokenPair(
+          user.id,
+          user.telegramId.value,
+          user.role,
         );
+
+        return {
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+          user: this.toUserDTO(user),
+          isNewUser: false,
+        };
       }
+
+      // Edge case: hash exists in cache but no user in DB.
+      // Fall through to create the user.
     }
 
     // 3. Parse start_param for referral code
@@ -83,7 +107,6 @@ export class AuthenticateWithTelegramUseCase {
 
     // 4. Execute in transaction
     const result = await this.uow.withTransaction(async () => {
-      const tgId = BigInt(parsed.user.id);
       let user = await this.userRepo.findByTelegramId(tgId);
 
       let isNewUser = false;
@@ -150,7 +173,7 @@ export class AuthenticateWithTelegramUseCase {
       return { user, isNewUser };
     });
 
-    // 5. Anti-replay: mark hash as used (short TTL — only prevents rapid replay)
+    // 5. Anti-replay: mark hash as seen
     if (this.antiReplayEnabled) {
       await this.cache.set(replayKey, '1', this.replayTTL);
     }

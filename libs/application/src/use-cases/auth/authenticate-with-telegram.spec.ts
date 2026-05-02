@@ -261,20 +261,62 @@ describe('AuthenticateWithTelegramUseCase', () => {
     expect(mocks.userRepo.create).not.toHaveBeenCalled();
   });
 
-  // ── TC5: Replay with same hash → rejected ──────────────────────────────
-  it('should reject replay of the same initData hash', async () => {
+  // ── TC5: Replay with same hash + existing user → idempotent auth ───────
+  it('should issue new tokens for existing user when initData hash is already seen', async () => {
+    const mocks = setupMocks();
+    const uc = createUseCase(mocks);
+
+    const existingUser = createUser();
+
+    mocks.verifier.verify.mockReturnValue(mockInitData);
+    mocks.cache.exists.mockResolvedValue(true); // hash already used
+    mocks.userRepo.findByTelegramId.mockResolvedValue(existingUser);
+    mocks.tokenService.issueTokenPair.mockResolvedValue(mockTokenPair);
+
+    const result = await uc.execute({ initDataRaw: 'replay_data' });
+
+    expect(result.accessToken).toBe('access-token-xxx');
+    expect(result.isNewUser).toBe(false);
+    expect(result.user.telegramId).toBe('123456789');
+
+    // No DB write for replay
+    expect(mocks.userRepo.create).not.toHaveBeenCalled();
+    expect(mocks.userRepo.update).not.toHaveBeenCalled();
+    // Still issues tokens
+    expect(mocks.tokenService.issueTokenPair).toHaveBeenCalled();
+  });
+
+  // ── TC5b: Replay + hash already used + banned user → USER_BANNED ────────
+  it('should throw USER_BANNED for replay with banned user', async () => {
+    const mocks = setupMocks();
+    const uc = createUseCase(mocks);
+
+    const bannedUser = createUser({ status: 'banned' });
+
+    mocks.verifier.verify.mockReturnValue(mockInitData);
+    mocks.cache.exists.mockResolvedValue(true);
+    mocks.userRepo.findByTelegramId.mockResolvedValue(bannedUser);
+
+    await expect(
+      uc.execute({ initDataRaw: 'replay_banned' }),
+    ).rejects.toMatchObject({ code: 'USER_BANNED' });
+  });
+
+  // ── TC5c: Replay + hash already used + no user → create user ────────────
+  it('should create user when hash is already seen but user missing in DB', async () => {
     const mocks = setupMocks();
     const uc = createUseCase(mocks);
 
     mocks.verifier.verify.mockReturnValue(mockInitData);
-    mocks.cache.exists.mockResolvedValue(true); // hash already used
+    mocks.cache.exists.mockResolvedValue(true);
+    mocks.userRepo.findByTelegramId.mockResolvedValue(null); // first call (replay path)
+    mocks.userRepo.findByReferralCode.mockResolvedValue(null);
+    mocks.tokenService.issueTokenPair.mockResolvedValue(mockTokenPair);
 
-    await expect(
-      uc.execute({ initDataRaw: 'replay_data' }),
-    ).rejects.toMatchObject({ code: 'AUTH_DATA_EXPIRED' });
+    const result = await uc.execute({ initDataRaw: 'replay_no_user' });
 
-    expect(mocks.userRepo.create).not.toHaveBeenCalled();
-    expect(mocks.userRepo.update).not.toHaveBeenCalled();
+    expect(result.isNewUser).toBe(true);
+    expect(mocks.userRepo.create).toHaveBeenCalledTimes(1);
   });
 
   // ── TC6: start_param with ref code on new user → referredById set ──────

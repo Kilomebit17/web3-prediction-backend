@@ -141,4 +141,16 @@ describe('Money', () => {
       expect(Money.fromPred('100.5').toNumber()).toBe(100.5);
     });
   });
+
+  describe('toJSON', () => {
+    it('returns string for safe JSON serialization', () => {
+      const money = Money.fromPred('100.5000');
+      expect(JSON.stringify({ money })).toBe('{"money":"100.5000"}');
+    });
+
+    it('handles negative values', () => {
+      const money = Money.fromPred('100').neg();
+      expect(JSON.stringify({ money })).toBe('{"money":"-100.0000"}');
+    });
+  });
 });

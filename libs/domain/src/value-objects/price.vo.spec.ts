@@ -58,4 +58,11 @@ describe('Price', () => {
       expect(Price.fromUsd('50000.5').toNumber()).toBeCloseTo(50000.5);
     });
   });
+
+  describe('toJSON', () => {
+    it('returns string for safe JSON serialization', () => {
+      const price = Price.fromUsd('50000.12345678');
+      expect(JSON.stringify({ price })).toBe('{"price":"50000.12345678"}');
+    });
+  });
 });

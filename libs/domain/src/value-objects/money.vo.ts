@@ -82,4 +82,8 @@ export class Money {
   toNumber(): number {
     return Number(this._amount) / SCALE_N;
   }
+
+  toJSON(): string {
+    return this.toString();
+  }
 }

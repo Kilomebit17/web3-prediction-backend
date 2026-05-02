@@ -101,9 +101,6 @@ export class JwtService implements OnModuleInit, IAuthTokenService {
     return jwt.sign(payload, this.privateKey, {
       algorithm: 'RS256',
       expiresIn: this.accessTTL,
-      issuer: this.issuer,
-      audience: this.audience,
-      subject: userId,
     });
   }
 
@@ -116,7 +113,6 @@ export class JwtService implements OnModuleInit, IAuthTokenService {
     const token = jwt.sign(payload, this.privateKey, {
       algorithm: 'RS256',
       expiresIn: this.refreshTTL,
-      subject: userId,
     });
 
     // Redis allow-list

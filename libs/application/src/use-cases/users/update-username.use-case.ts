@@ -42,8 +42,18 @@ export class UpdateUsernameUseCase {
       throw Object.assign(new Error('User not found'), { code: 'NOT_FOUND' });
     }
 
+    const oldUsername = user.username;
     user.changeUsername(input.username);
     await this.userRepo.update(user);
+
+    // Update leaderboard entry (member string includes username)
+    const rankId = await this.cache.get<string>(`user:${input.userId}:rank`);
+    if (rankId) {
+      const oldMember = `${user.id}:${oldUsername ?? ''}:${user.stats.score}:${user.balance.toString()}`;
+      const newMember = `${user.id}:${user.username}:${user.stats.score}:${user.balance.toString()}`;
+      await this.cache.zrem(`leaderboard:${rankId}:score`, oldMember);
+      await this.cache.zadd(`leaderboard:${rankId}:score`, Number(user.stats.score), newMember);
+    }
 
     // Invalidate cache
     await this.cache.del(`user:${input.userId}:profile`);
@@ -70,6 +80,7 @@ export class UpdateUsernameUseCase {
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
       lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      isFirstDeposit: false,
     };
   }
 }

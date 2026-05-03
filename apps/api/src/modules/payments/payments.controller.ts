@@ -6,7 +6,8 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator';
 import {
-  CreatePaymentIntentUseCase, DEPOSIT_REPO, TELEGRAM_STARS_ADAPTER,
+  CreatePaymentIntentUseCase, ProcessDepositCompletionUseCase,
+  DEPOSIT_REPO, TELEGRAM_STARS_ADAPTER,
   type PaymentIntentResult, type CreatePaymentIntentInput,
 } from '@pred/application';
 import type { DepositPackageDTO, PaymentIntentDTO } from '@pred/infrastructure';
@@ -24,6 +25,7 @@ interface IDepositRepo {
 export class PaymentsController {
   constructor(
     private readonly createIntentUseCase: CreatePaymentIntentUseCase,
+    private readonly processCompletionUseCase: ProcessDepositCompletionUseCase,
     @Inject(DEPOSIT_REPO) private readonly depositRepo: IDepositRepo,
     @Inject(TELEGRAM_STARS_ADAPTER) private readonly telegramStars: TelegramStarsAdapter,
   ) {}
@@ -77,7 +79,10 @@ export class PaymentsController {
     if (body.type === 'checkout.session.completed') {
       const intentId = body.data.object.metadata?.intentId;
       if (intentId) {
-        await this.depositRepo.completeIntent(intentId, body.data.object.id);
+        await this.processCompletionUseCase.execute({
+          intentId,
+          providerIntentId: body.data.object.id,
+        });
       }
     }
   }
@@ -98,8 +103,7 @@ export class PaymentsController {
     // Handle pre_checkout_query — must be answered within 10 seconds
     if (body.pre_checkout_query) {
       const q = body.pre_checkout_query;
-      // Verify the payment intent exists
-      const intent = await this.depositRepo.findIntentByIdempotencyKey(q.invoice_payload);
+      const intent = await this.depositRepo.findIntentById(q.invoice_payload);
       if (intent) {
         await this.telegramStars.answerPreCheckoutQuery(q.id, true);
       } else {
@@ -111,10 +115,10 @@ export class PaymentsController {
     // Handle successful_payment
     if (body.message?.successful_payment) {
       const p = body.message.successful_payment;
-      const intent = await this.depositRepo.findIntentByIdempotencyKey(p.invoice_payload);
-      if (intent) {
-        await this.depositRepo.completeIntent(intent.id, p.telegram_payment_charge_id);
-      }
+      await this.processCompletionUseCase.execute({
+        intentId: p.invoice_payload,
+        providerIntentId: p.telegram_payment_charge_id,
+      });
       return { ok: true };
     }
 

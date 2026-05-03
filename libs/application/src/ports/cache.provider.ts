@@ -8,6 +8,8 @@ export interface ICacheProvider {
   smembers(key: string): Promise<string[]>;
   lpush(key: string, value: string): Promise<void>;
   zadd(key: string, score: number, member: string): Promise<void>;
+  zrem(key: string, member: string): Promise<void>;
+  zcard(key: string): Promise<number>;
   zrange(key: string, start: number, stop: number): Promise<string[]>;
   zrevrange(key: string, start: number, stop: number): Promise<string[]>;
 }

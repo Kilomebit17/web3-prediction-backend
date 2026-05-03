@@ -1,5 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { CACHE_PROVIDER, type ICacheProvider } from '../../ports';
+import { GetLeaderboardUseCase } from './get-leaderboard.use-case';
 
 interface ILeaderboardSnapshotRepo {
   createSnapshot(params: {
@@ -20,22 +21,21 @@ export class SnapshotLeaderboardUseCase {
     @Inject(LEADERBOARD_SNAPSHOT_REPO) private readonly snapshotRepo: ILeaderboardSnapshotRepo,
   ) {}
 
-  async execute(period: string): Promise<void> {
-    const key = `leaderboard:score:${period}`;
-    const members = await this.cache.zrevrange(key, 0, 99);
-    for (let i = 0; i < members.length; i++) {
-      const parts = members[i]?.split(':') ?? [];
-      const userId = parts[0];
-      const score = parts[2];
-      if (userId && score) {
-        await this.snapshotRepo.createSnapshot({
-          userId, period, position: i + 1,
-          score: BigInt(score), balance: '0',
-        });
+  async execute(): Promise<void> {
+    for (const rankId of GetLeaderboardUseCase.rankIds()) {
+      const key = `leaderboard:${rankId}:score`;
+      const members = await this.cache.zrevrange(key, 0, 99);
+      for (let i = 0; i < members.length; i++) {
+        const parts = members[i]?.split(':') ?? [];
+        const userId = parts[0];
+        const score = parts[2];
+        if (userId && score) {
+          await this.snapshotRepo.createSnapshot({
+            userId, period: rankId, position: i + 1,
+            score: BigInt(score), balance: parts[3] ?? '0',
+          });
+        }
       }
-    }
-    if (period === 'weekly') {
-      await this.cache.del(key);
     }
   }
 }

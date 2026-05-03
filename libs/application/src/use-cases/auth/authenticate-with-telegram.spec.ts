@@ -120,6 +120,8 @@ function setupMocks() {
       smembers: jest.fn(),
       lpush: jest.fn(),
       zadd: jest.fn(),
+      zrem: jest.fn(),
+      zcard: jest.fn(),
       zrange: jest.fn(),
       zrevrange: jest.fn(),
     } as jest.Mocked<ICacheProvider>,

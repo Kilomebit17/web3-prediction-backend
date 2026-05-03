@@ -7,15 +7,21 @@ import {
   type IUserRepository,
   type ICacheProvider,
 } from '../../ports';
+import { DEPOSIT_REPO } from '../payments/create-payment-intent.use-case';
 
 export interface GetCurrentUserInput {
   userId: string;
+}
+
+interface IDepositRepo {
+  countCompletedDepositsByUserId(userId: string): Promise<number>;
 }
 
 @Injectable()
 export class GetCurrentUserUseCase {
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
+    @Inject(DEPOSIT_REPO) private readonly depositRepo: IDepositRepo,
     @Inject(CACHE_PROVIDER) private readonly cache: ICacheProvider,
   ) {}
 
@@ -31,12 +37,13 @@ export class GetCurrentUserUseCase {
       throw Object.assign(new Error('User not found'), { code: 'NOT_FOUND' });
     }
 
-    const dto = this.toDto(user);
+    const completedCount = await this.depositRepo.countCompletedDepositsByUserId(input.userId);
+    const dto = this.toDto(user, completedCount === 0);
     await this.cache.set(cacheKey, JSON.stringify(dto), 300); // TTL 5m
     return dto;
   }
 
-  private toDto(user: User): UserDTO {
+  private toDto(user: User, isFirstDeposit: boolean): UserDTO {
     return {
       id: user.id,
       telegramId: user.telegramId.value.toString(),
@@ -59,6 +66,7 @@ export class GetCurrentUserUseCase {
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
       lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      isFirstDeposit,
     };
   }
 }

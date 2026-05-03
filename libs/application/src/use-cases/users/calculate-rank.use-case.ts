@@ -30,11 +30,19 @@ export class CalculateRankUseCase {
 
     const newRank = this.calculator.calculate(user.balance);
     const previousRankId = await this.cache.get<string>(`user:${userId}:rank`);
+    const member = `${user.id}:${user.username ?? ''}:${user.stats.score}:${user.balance.toString()}`;
 
     if (previousRankId && previousRankId !== newRank.id) {
+      // Rank changed — move to new category
+      await this.cache.zrem(`leaderboard:${previousRankId}:score`, member);
+      await this.cache.zadd(`leaderboard:${newRank.id}:score`, Number(user.stats.score), member);
+
       await this.eventBus.publish(
         new RankUpgraded(userId, previousRankId, newRank.id),
       );
+    } else {
+      // Same rank — update entry (score/balance may have changed)
+      await this.cache.zadd(`leaderboard:${newRank.id}:score`, Number(user.stats.score), member);
     }
     await this.cache.set(`user:${userId}:rank`, newRank.id, 0);
   }

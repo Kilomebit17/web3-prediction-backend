@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { STARS_PER_USD } from '@pred/application';
 
 export interface TelegramInvoice {
   invoiceLink: string;
@@ -37,7 +38,7 @@ export class TelegramStarsAdapter {
     title: string;
     description: string;
     payload: string;
-    amount: number; // in Stars (1 Star ≈ $0.01 USD)
+    amount: number; // in Stars (~42 Stars ≈ 1 USD)
     photoUrl?: string;
   }): Promise<string> {
     const body = {
@@ -95,8 +96,8 @@ export class TelegramStarsAdapter {
     return diff === 0;
   }
 
-  // Parse USD amount to Telegram Stars (1 USD ≈ 100 Stars)
+  // Parse USD amount to Telegram Stars (~42 Stars ≈ 1 USD)
   usdToStars(usdAmount: number): number {
-    return Math.round(usdAmount * 100);
+    return Math.round(usdAmount * STARS_PER_USD);
   }
 }

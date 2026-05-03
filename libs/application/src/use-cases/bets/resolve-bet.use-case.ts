@@ -76,11 +76,6 @@ export class ResolveBetUseCase {
       await this.cache.set(`user:${bet.userId}:profile`, '', 1);
       await this.cache.lpush(`user:${bet.userId}:resolved_bets`, bet.id);
 
-      // Leaderboard score updates
-      const member = `${user.id}:${user.username ?? ''}:${user.stats.score}:${user.balance.toString()}`;
-      await this.cache.zadd('leaderboard:score:all', Number(user.stats.score), member);
-      await this.cache.zadd('leaderboard:score:weekly', Number(user.stats.score), member);
-
       // Events
       await this.eventBus.publish(
         new BetResolved(bet.id, bet.userId, resolution.status, resolution.netWinAmount.toString()),

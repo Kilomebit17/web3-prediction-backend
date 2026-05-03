@@ -83,6 +83,14 @@ export class RedisCacheService implements ICacheProvider, OnModuleInit, OnModule
     await this.ensureClient().zadd(key, score, member);
   }
 
+  async zrem(key: string, member: string): Promise<void> {
+    await this.ensureClient().zrem(key, member);
+  }
+
+  async zcard(key: string): Promise<number> {
+    return this.ensureClient().zcard(key);
+  }
+
   async zrange(key: string, start: number, stop: number): Promise<string[]> {
     return this.ensureClient().zrange(key, start, stop);
   }

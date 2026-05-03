@@ -20,4 +20,5 @@ export interface UserDTO {
   createdAt: string;
   updatedAt: string;
   lastLoginAt: string | null;
+  isFirstDeposit: boolean;
 }

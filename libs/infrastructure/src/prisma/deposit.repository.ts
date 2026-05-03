@@ -76,10 +76,18 @@ export class DepositRepository {
     return row ? this.toDto(row) : null;
   }
 
-  async completeIntent(id: string, providerIntentId: string): Promise<PaymentIntentDTO> {
+  async countCompletedDepositsByUserId(userId: string): Promise<number> {
+    return this.prisma.paymentIntent.count({
+      where: { userId, status: 'completed' },
+    });
+  }
+
+  async completeIntent(id: string, providerIntentId: string, finalPredAmount?: number): Promise<PaymentIntentDTO> {
+    const data: Record<string, unknown> = { status: 'completed', providerIntentId, completedAt: new Date() };
+    if (finalPredAmount !== undefined) data.predAmount = finalPredAmount;
     const row = await this.prisma.paymentIntent.update({
       where: { id },
-      data: { status: 'completed', providerIntentId, completedAt: new Date() },
+      data,
     });
     return this.toDto(row);
   }

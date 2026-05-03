@@ -5,11 +5,13 @@ import {
   GetUserStatsUseCase,
   LinkWalletUseCase,
   USER_REPOSITORY,
+  DEPOSIT_REPO,
   EVENT_BUS,
   CACHE_PROVIDER,
 } from '@pred/application';
 import {
   UserRepository,
+  DepositRepository,
   RedisCacheService,
   InMemoryEventBus,
 } from '@pred/infrastructure';
@@ -26,6 +28,7 @@ import { WalletsController } from './wallets.controller';
     GetUserStatsUseCase,
     LinkWalletUseCase,
     { provide: USER_REPOSITORY, useClass: UserRepository },
+    { provide: DEPOSIT_REPO, useClass: DepositRepository },
     { provide: EVENT_BUS, useClass: InMemoryEventBus },
     { provide: CACHE_PROVIDER, useExisting: RedisCacheService },
   ],

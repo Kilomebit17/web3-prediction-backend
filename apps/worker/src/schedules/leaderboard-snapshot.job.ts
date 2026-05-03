@@ -7,8 +7,7 @@ export async function runLeaderboardSnapshot(): Promise<void> {
   try {
     const stubRepo = { createSnapshot: async () => undefined };
     const uc = new SnapshotLeaderboardUseCase(redis, stubRepo);
-    await uc.execute('all');
-    await uc.execute('weekly');
+    await uc.execute();
   } finally {
     await redis.onModuleDestroy();
   }

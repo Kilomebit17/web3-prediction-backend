@@ -24,4 +24,5 @@ export * from './use-cases/referrals/get-referral-info.use-case';
 export * from './use-cases/referrals/apply-referral-reward.use-case';
 export * from './use-cases/users/calculate-rank.use-case';
 export * from './use-cases/payments/create-payment-intent.use-case';
+export * from './use-cases/payments/process-deposit-completion.use-case';
 export * from './use-cases/admin/admin-users.use-case';

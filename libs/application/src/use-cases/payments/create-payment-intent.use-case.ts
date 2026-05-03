@@ -1,5 +1,11 @@
 import { Injectable, Inject } from '@nestjs/common';
 
+/** Telegram Star rate: ~42 Stars per 1 USD (based on Telegram's official star pricing) */
+export const STARS_PER_USD = 42;
+
+/** First-deposit bonus: +200% of base package amount */
+export const FIRST_DEPOSIT_BONUS_PERCENT = 200;
+
 export interface CreatePaymentIntentInput {
   userId: string;
   packageId: string;
@@ -20,6 +26,7 @@ export interface PaymentIntentResult {
 interface IDepositRepo {
   findPackageById(id: string): Promise<{ amount: string; bonusAmount: string; priceUsd: string; tag: string | null } | null>;
   findIntentByIdempotencyKey(key: string): Promise<PaymentIntentResult | null>;
+  countCompletedDepositsByUserId(userId: string): Promise<number>;
   createPaymentIntent(params: {
     userId: string; packageId: string; provider: string;
     amountUsd: number; predAmount: number; idempotencyKey: string;
@@ -62,7 +69,7 @@ export class CreatePaymentIntentUseCase {
     let paymentUrl: string | null = null;
 
     if (input.provider === 'telegram_stars') {
-      const stars = Math.round(amountUsd * 100); // 1 USD ≈ 100 Stars
+      const stars = Math.round(amountUsd * STARS_PER_USD);
       paymentUrl = await this.telegramStars.createInvoiceLink({
         title: `PRED ${pkg.tag ?? 'Pack'}`,
         description: `${predAmount} PRED tokens`,

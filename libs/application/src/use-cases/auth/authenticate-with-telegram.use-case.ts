@@ -28,6 +28,7 @@ import {
   type ICacheProvider,
 } from '../../ports';
 import { REFERRAL_REPO, type IReferralRepo } from '../referrals/apply-referral-reward.use-case';
+import { GetLeaderboardUseCase } from '../leaderboard/get-leaderboard.use-case';
 
 export interface AuthenticateWithTelegramInput {
   initDataRaw: string;
@@ -149,6 +150,12 @@ export class AuthenticateWithTelegramUseCase {
           await this.referralRepo.create({ referrerId: referredById, referredId: user.id });
         }
 
+        // Add new user to rank-specific leaderboard
+        const rankId = GetLeaderboardUseCase.calculateRank(user.balance.toString());
+        const member = `${user.id}:${user.username ?? ''}:${user.stats.score}:${user.balance.toString()}`;
+        await this.cache.zadd(`leaderboard:${rankId}:score`, Number(user.stats.score), member);
+        await this.cache.set(`user:${user.id}:rank`, rankId, 0);
+
         isNewUser = true;
 
         await this.eventBus.publish(
@@ -263,6 +270,7 @@ export class AuthenticateWithTelegramUseCase {
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
       lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      isFirstDeposit: false,
     };
   }
 }

@@ -109,6 +109,10 @@ export class BetsController {
           return new HttpException({ type: 'https://pred.game/errors/forbidden', title: e.message, status: 403, code: 'FORBIDDEN' }, 403);
         case 'BET_EXPIRED':
           return new HttpException({ type: 'https://pred.game/errors/bet-expired', title: e.message, status: 422, code: 'BET_EXPIRED' }, 422);
+        case 'SUBSCRIPTION_REQUIRED':
+          return new HttpException({ type: 'https://pred.game/errors/subscription-required', title: e.message, status: 402, code: 'SUBSCRIPTION_REQUIRED' }, 402);
+        case 'NOT_FOUND':
+          return new HttpException({ type: 'https://pred.game/errors/not-found', title: e.message, status: 404, code: 'NOT_FOUND' }, 404);
       }
     }
     throw err;

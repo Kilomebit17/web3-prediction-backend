@@ -238,6 +238,7 @@ async function seedDepositPackages(): Promise<void> {
     { amount: 100000, bonusPercent: 100, priceUsd: 99.99, tag: 'WHALE',     sortOrder: 7 },
   ];
 
+  await prisma.paymentIntent.deleteMany({});
   await prisma.depositPackage.deleteMany({});
   await prisma.depositPackage.createMany({
     data: packages.map((p) => ({

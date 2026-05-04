@@ -1,14 +1,26 @@
 import { validate, parse, type ValidateValue } from '@telegram-apps/init-data-node';
-import type { User as TelegramUser } from '@telegram-apps/init-data-node';
+
+export interface CamelUser {
+  addedToAttachmentMenu?: boolean;
+  allowsWriteToPm?: boolean;
+  firstName: string;
+  id: number;
+  isBot?: boolean;
+  isPremium?: boolean;
+  lastName?: string;
+  languageCode?: string;
+  photoUrl?: string;
+  username?: string;
+}
 
 export interface ParsedInitData {
   authDate: Date;
   hash: string;
-  user: TelegramUser;
+  user: CamelUser;
   startParam?: string;
   queryId?: string;
   chatInstance?: string;
-  receiver?: TelegramUser;
+  receiver?: CamelUser;
 }
 
 export class AuthDataExpiredError extends Error {
@@ -52,22 +64,20 @@ export class TelegramInitDataVerifier {
       throw new InvalidSignatureError();
     }
 
-    const parsed = parse(raw);
+    const parsed = parse(raw, true);
 
     if (!parsed.user) {
       throw new InvalidSignatureError();
     }
 
     return {
-      authDate: parsed.auth_date,
+      authDate: parsed.authDate,
       hash: parsed.hash,
-      user: parsed.user,
-      startParam: parsed.start_param,
-      queryId: parsed.query_id,
-      chatInstance: parsed.chat_instance,
-      receiver: parsed.receiver,
+      user: parsed.user as CamelUser,
+      startParam: parsed.startParam,
+      queryId: parsed.queryId,
+      chatInstance: parsed.chatInstance,
+      receiver: parsed.receiver as CamelUser | undefined,
     };
   }
 }
-
-export type { TelegramUser };

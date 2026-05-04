@@ -130,7 +130,7 @@ export class AuthenticateWithTelegramUseCase {
           randomUUID(),
           TelegramUserId.of(tgId),
           profile,
-          null,
+          profile.firstName,
           Money.fromPred(this.initialBalance),
           freshStats,
           await this.generateUniqueReferralCode(),

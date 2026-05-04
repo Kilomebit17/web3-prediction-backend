@@ -33,7 +33,7 @@ export class BetsController {
   ): Promise<BetDTO> {
     if (!idempotencyKey) {
       throw new HttpException(
-        { type: 'https://pred.game/errors/invalid-input', title: 'Idempotency-Key header required', status: 400, code: 'INVALID_INPUT' }, 400);
+        { message: 'Idempotency-Key header required', status: 400 }, 400);
     }
     try {
       return await this.placeBet.execute({
@@ -91,7 +91,7 @@ export class BetsController {
     } catch (err: unknown) {
       if (err instanceof Error && 'code' in err && (err as Error & { code: string }).code === 'NOT_FOUND') {
         throw new HttpException(
-          { type: 'https://pred.game/errors/not-found', title: err.message, status: 404, code: 'NOT_FOUND' }, 404);
+          { message: err.message, status: 404 }, 404);
       }
       throw err;
     }
@@ -102,17 +102,17 @@ export class BetsController {
       const e = err as Error & { code: string; fields?: Record<string, string[]> };
       switch (e.code) {
         case 'INSUFFICIENT_BALANCE':
-          return new HttpException({ type: 'https://pred.game/errors/insufficient-balance', title: e.message, status: 422, code: 'INSUFFICIENT_BALANCE' }, 422);
+          return new HttpException({ message: e.message, status: 422 }, 422);
         case 'INVALID_INPUT':
-          return new HttpException({ type: 'https://pred.game/errors/invalid-input', title: e.message, status: 400, code: 'INVALID_INPUT', fields: e.fields }, 400);
+          return new HttpException({ message: e.message, status: 400 }, 400);
         case 'FORBIDDEN':
-          return new HttpException({ type: 'https://pred.game/errors/forbidden', title: e.message, status: 403, code: 'FORBIDDEN' }, 403);
+          return new HttpException({ message: e.message, status: 403 }, 403);
         case 'BET_EXPIRED':
-          return new HttpException({ type: 'https://pred.game/errors/bet-expired', title: e.message, status: 422, code: 'BET_EXPIRED' }, 422);
+          return new HttpException({ message: e.message, status: 422 }, 422);
         case 'SUBSCRIPTION_REQUIRED':
-          return new HttpException({ type: 'https://pred.game/errors/subscription-required', title: e.message, status: 402, code: 'SUBSCRIPTION_REQUIRED' }, 402);
+          return new HttpException({ message: e.message, status: 402 }, 402);
         case 'NOT_FOUND':
-          return new HttpException({ type: 'https://pred.game/errors/not-found', title: e.message, status: 404, code: 'NOT_FOUND' }, 404);
+          return new HttpException({ message: e.message, status: 404 }, 404);
       }
     }
     throw err;

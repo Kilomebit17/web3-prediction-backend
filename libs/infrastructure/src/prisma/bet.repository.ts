@@ -22,7 +22,11 @@ export class BetRepository implements IBetRepository {
 
   async findActiveByUserId(userId: string): Promise<Bet[]> {
     const rows = await this.prisma.bet.findMany({
-      where: { userId, status: 'active' },
+      where: {
+        userId,
+        status: 'active',
+        expiresAt: { gt: new Date() },
+      },
       orderBy: { placedAt: 'desc' },
     });
     return rows.map((r) => this.toDomain(r));

@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./dist",
+    "types": ["node"],
     "paths": {
       "@pred/domain": ["../domain/src/index.ts"],
       "@pred/domain/*": ["../domain/src/*"],

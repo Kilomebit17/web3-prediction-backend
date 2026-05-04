@@ -159,25 +159,40 @@ export class PlaceBetUseCase {
       return bet;
     });
 
-    // 5. Events
-    await this.eventBus.publish(
-      new BetPlaced(bet.id, input.userId, input.coinId, input.amount, input.multiplier),
-    );
-    await this.eventBus.publish(
-      new UserBalanceChanged(input.userId, input.amount, 'bet_placed'),
-    );
-
-    // 6. Schedule resolution
-    await this.queue.scheduleBetResolution(bet.id, bet.durationSeconds);
-
-    // 7. Redis: active bets list
-    await this.cache.lpush(`user:${input.userId}:active_bets`, bet.id);
-
-    // 8. Cache response
+    // 5. Build DTO (needed for idempotency cache)
     const dto = this.toDto(bet);
-    await this.cache.set(idempotencyKey, JSON.stringify(dto), 86400);
 
-    // 9. WS broadcast (Phase 1.15)
+    // 6. Post-transaction: best-effort operations — bet is already persisted;
+    //    failures here must not prevent returning a successful response.
+
+    // 6a. Cache response for idempotency (awaited to minimize double-bet risk)
+    try {
+      await this.cache.set(idempotencyKey, JSON.stringify(dto), 86400);
+    } catch (err: unknown) {
+      console.error('[PlaceBet] idempotency cache error:', (err as Error)?.message);
+    }
+
+    // 6b. Events (notifications + rank recalculation)
+    this.eventBus.publish(
+      new BetPlaced(bet.id, input.userId, input.coinId, input.amount, input.multiplier),
+    ).catch((err) => {
+      console.error('[PlaceBet] BetPlaced event error:', err?.message);
+    });
+    this.eventBus.publish(
+      new UserBalanceChanged(input.userId, input.amount, 'bet_placed'),
+    ).catch((err) => {
+      console.error('[PlaceBet] UserBalanceChanged event error:', err?.message);
+    });
+
+    // 6c. Schedule resolution (critical — but worker recovers on restart via findExpiredActive)
+    this.queue.scheduleBetResolution(bet.id, bet.durationSeconds).catch((err) => {
+      console.error(`[PlaceBet] Failed to schedule resolution for bet=${bet.id}:`, err?.message);
+    });
+
+    // 6d. Redis: active bets list
+    this.cache.lpush(`user:${input.userId}:active_bets`, bet.id).catch((err) => {
+      console.error('[PlaceBet] active bets lpush error:', err?.message);
+    });
 
     return dto;
   }

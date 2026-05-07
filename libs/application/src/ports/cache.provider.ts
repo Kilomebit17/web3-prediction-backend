@@ -12,6 +12,7 @@ export interface ICacheProvider {
   zcard(key: string): Promise<number>;
   zrange(key: string, start: number, stop: number): Promise<string[]>;
   zrevrange(key: string, start: number, stop: number): Promise<string[]>;
+  zremByUser(key: string, userId: string, count?: number): Promise<number>;
 }
 
 export const CACHE_PROVIDER = Symbol('ICacheProvider');

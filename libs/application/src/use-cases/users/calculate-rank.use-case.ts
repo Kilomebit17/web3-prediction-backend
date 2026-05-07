@@ -2,8 +2,12 @@ import { Injectable, Inject } from '@nestjs/common';
 import { RankCalculator, RankUpgraded, Money } from '@pred/domain';
 import { Rank } from '@pred/domain';
 import {
-  USER_REPOSITORY, EVENT_BUS, CACHE_PROVIDER,
-  type IUserRepository, type IEventBus, type ICacheProvider,
+  USER_REPOSITORY,
+  EVENT_BUS,
+  CACHE_PROVIDER,
+  type IUserRepository,
+  type IEventBus,
+  type ICacheProvider,
 } from '../../ports';
 
 const RANKS: Rank[] = [
@@ -30,24 +34,42 @@ export class CalculateRankUseCase {
 
     const newRank = this.calculator.calculate(user.balance);
     const previousRankId = await this.cache.get<string>(`user:${userId}:rank`);
-    const member = `${user.id}:${user.username ?? ''}:${user.stats.score}:${user.balance.toString()}`;
+    const newMember = `${user.id}:${user.username ?? ''}:${user.stats.score}:${user.balance.toString()}`;
+
+    // Remove previous leaderboard entry (member string changes with balance/score)
+    const previousMember = await this.cache.get<string>(`user:${userId}:member`);
 
     if (previousRankId && previousRankId !== newRank.id) {
-      // Rank changed — move to new category
-      await this.cache.zrem(`leaderboard:${previousRankId}:score`, member);
-      await this.cache.zadd(`leaderboard:${newRank.id}:score`, Number(user.stats.score), member);
+      // Rank changed — remove old entry from old rank, add to new rank
+      if (previousMember) {
+        await this.cache.zrem(`leaderboard:${previousRankId}:score`, previousMember);
+      } else {
+        // Cleanup any stale duplicates from old rank (e.g. first call after deploy)
+        await this.cache.zremByUser(`leaderboard:${previousRankId}:score`, userId);
+      }
+      await this.cache.zadd(`leaderboard:${newRank.id}:score`, Number(user.stats.score), newMember);
 
-      await this.eventBus.publish(
-        new RankUpgraded(userId, previousRankId, newRank.id),
-      );
+      await this.eventBus.publish(new RankUpgraded(userId, previousRankId, newRank.id));
     } else {
-      // Same rank — update entry (score/balance may have changed)
-      await this.cache.zadd(`leaderboard:${newRank.id}:score`, Number(user.stats.score), member);
+      // Same rank — remove old entry, add updated one
+      if (previousMember) {
+        await this.cache.zrem(`leaderboard:${newRank.id}:score`, previousMember);
+      } else {
+        // Cleanup any stale duplicates (e.g. first call after deploy)
+        await this.cache.zremByUser(`leaderboard:${newRank.id}:score`, userId);
+      }
+      await this.cache.zadd(`leaderboard:${newRank.id}:score`, Number(user.stats.score), newMember);
     }
     await this.cache.set(`user:${userId}:rank`, newRank.id, 0);
+    await this.cache.set(`user:${userId}:member`, newMember, 0);
   }
 
   static getRanks() {
-    return RANKS.map((r) => ({ id: r.id, name: r.name, minBalance: r.minBalance.toString(), tierOrder: r.tierOrder }));
+    return RANKS.map((r) => ({
+      id: r.id,
+      name: r.name,
+      minBalance: r.minBalance.toString(),
+      tierOrder: r.tierOrder,
+    }));
   }
 }

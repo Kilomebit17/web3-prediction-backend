@@ -61,18 +61,14 @@ export class AuthenticateWithTelegramUseCase {
     this.replayTTL = parseInt(process.env.TELEGRAM_FRESH_INITDATA_TTL ?? '60', 10);
   }
 
-  async execute(
-    input: AuthenticateWithTelegramInput,
-  ): Promise<AuthenticateWithTelegramOutput> {
+  async execute(input: AuthenticateWithTelegramInput): Promise<AuthenticateWithTelegramOutput> {
     // 1. Verify initData
     const parsed = this.verifier.verify(input.initDataRaw);
     const tgId = BigInt(parsed.user.id);
 
     // 2. Check if this initData was already seen
     const replayKey = `tma:used_hash:${parsed.hash}`;
-    const alreadyUsed = this.antiReplayEnabled
-      ? await this.cache.exists(replayKey)
-      : false;
+    const alreadyUsed = this.antiReplayEnabled ? await this.cache.exists(replayKey) : false;
 
     if (alreadyUsed) {
       // Idempotent: same initData → find user and issue fresh tokens
@@ -155,12 +151,11 @@ export class AuthenticateWithTelegramUseCase {
         const member = `${user.id}:${user.username ?? ''}:${user.stats.score}:${user.balance.toString()}`;
         await this.cache.zadd(`leaderboard:${rankId}:score`, Number(user.stats.score), member);
         await this.cache.set(`user:${user.id}:rank`, rankId, 0);
+        await this.cache.set(`user:${user.id}:member`, member, 0);
 
         isNewUser = true;
 
-        await this.eventBus.publish(
-          new UserRegistered(user.id, tgId, referredById),
-        );
+        await this.eventBus.publish(new UserRegistered(user.id, tgId, referredById));
       } else {
         // Existing user
         if (user.status === 'banned') {
@@ -172,9 +167,7 @@ export class AuthenticateWithTelegramUseCase {
         user.updateTelegramProfile(this.toTelegramProfile(parsed.user));
         await this.userRepo.update(user);
 
-        await this.eventBus.publish(
-          new UserLoggedIn(user.id, tgId),
-        );
+        await this.eventBus.publish(new UserLoggedIn(user.id, tgId));
       }
 
       return { user, isNewUser };
@@ -225,17 +218,15 @@ export class AuthenticateWithTelegramUseCase {
     throw new Error('Failed to generate unique referral code');
   }
 
-  private toTelegramProfile(
-    user: {
-      username?: string;
-      firstName: string;
-      lastName?: string;
-      languageCode?: string;
-      isPremium?: boolean;
-      photoUrl?: string;
-      allowsWriteToPm?: boolean;
-    },
-  ): TelegramProfile {
+  private toTelegramProfile(user: {
+    username?: string;
+    firstName: string;
+    lastName?: string;
+    languageCode?: string;
+    isPremium?: boolean;
+    photoUrl?: string;
+    allowsWriteToPm?: boolean;
+  }): TelegramProfile {
     return {
       username: user.username ?? null,
       firstName: user.firstName,

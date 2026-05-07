@@ -98,4 +98,30 @@ export class RedisCacheService implements ICacheProvider, OnModuleInit, OnModule
   async zrevrange(key: string, start: number, stop: number): Promise<string[]> {
     return this.ensureClient().zrevrange(key, start, stop);
   }
+
+  async zremByUser(key: string, userId: string, count = 100): Promise<number> {
+    const client = this.ensureClient();
+    const pattern = `${userId}:*`;
+    let removed = 0;
+    let cursor = 0;
+    do {
+      const [nextCursor, results] = await client.zscan(
+        key,
+        cursor,
+        'MATCH',
+        pattern,
+        'COUNT',
+        count,
+      );
+      cursor = parseInt(nextCursor, 10);
+      for (let i = 0; i < results.length; i += 2) {
+        const member = results[i];
+        if (member) {
+          await client.zrem(key, member);
+          removed++;
+        }
+      }
+    } while (cursor !== 0);
+    return removed;
+  }
 }

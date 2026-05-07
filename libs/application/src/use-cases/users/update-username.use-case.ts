@@ -22,10 +22,10 @@ export class UpdateUsernameUseCase {
   async execute(input: UpdateUsernameInput): Promise<UserDTO> {
     // Validate format (ROADMAP §6.3)
     if (!/^[a-zA-Z0-9_]{3,32}$/.test(input.username)) {
-      throw Object.assign(
-        new Error('Username must be 3-32 alphanumeric characters'),
-        { code: 'INVALID_INPUT', fields: { username: ['Invalid format'] } },
-      );
+      throw Object.assign(new Error('Username must be 3-32 alphanumeric characters'), {
+        code: 'INVALID_INPUT',
+        fields: { username: ['Invalid format'] },
+      });
     }
 
     // Check uniqueness
@@ -53,6 +53,7 @@ export class UpdateUsernameUseCase {
       const newMember = `${user.id}:${user.username}:${user.stats.score}:${user.balance.toString()}`;
       await this.cache.zrem(`leaderboard:${rankId}:score`, oldMember);
       await this.cache.zadd(`leaderboard:${rankId}:score`, Number(user.stats.score), newMember);
+      await this.cache.set(`user:${input.userId}:member`, newMember, 0);
     }
 
     // Invalidate cache

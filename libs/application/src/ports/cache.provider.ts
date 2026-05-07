@@ -13,6 +13,7 @@ export interface ICacheProvider {
   zrange(key: string, start: number, stop: number): Promise<string[]>;
   zrevrange(key: string, start: number, stop: number): Promise<string[]>;
   zremByUser(key: string, userId: string, count?: number): Promise<number>;
+  zrevrank(key: string, member: string): Promise<number | null>;
 }
 
 export const CACHE_PROVIDER = Symbol('ICacheProvider');

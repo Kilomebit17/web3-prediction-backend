@@ -124,4 +124,9 @@ export class RedisCacheService implements ICacheProvider, OnModuleInit, OnModule
     } while (cursor !== 0);
     return removed;
   }
+
+  async zrevrank(key: string, member: string): Promise<number | null> {
+    const result = await this.ensureClient().zrevrank(key, member);
+    return result;
+  }
 }

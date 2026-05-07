@@ -45,27 +45,14 @@ export class GetCurrentUserUseCase {
 
   private toDto(user: User, isFirstDeposit: boolean): UserDTO {
     return {
-      id: user.id,
-      telegramId: user.telegramId.value.toString(),
-      telegramUsername: user.telegramProfile.username,
       firstName: user.telegramProfile.firstName,
       lastName: user.telegramProfile.lastName,
-      languageCode: user.telegramProfile.languageCode,
       isPremium: user.telegramProfile.isPremium,
       photoUrl: user.telegramProfile.photoUrl,
-      username: user.username,
       balance: user.balance.toString(),
-      totalWins: user.stats.totalWins,
-      totalLosses: user.stats.totalLosses,
-      bestWinStreak: user.stats.bestWinStreak,
-      score: user.stats.score.toString(),
       referralCode: user.referralCode.value,
       referredById: user.referredById,
-      role: user.role,
       status: user.status,
-      createdAt: user.createdAt.toISOString(),
-      updatedAt: user.updatedAt.toISOString(),
-      lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
       isFirstDeposit,
     };
   }

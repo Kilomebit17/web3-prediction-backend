@@ -36,30 +36,18 @@ export class CalculateRankUseCase {
     const previousRankId = await this.cache.get<string>(`user:${userId}:rank`);
     const newMember = `${user.id}:${user.username ?? ''}:${user.stats.score}:${user.balance.toString()}`;
 
-    // Remove previous leaderboard entry (member string changes with balance/score)
-    const previousMember = await this.cache.get<string>(`user:${userId}:member`);
-
     if (previousRankId && previousRankId !== newRank.id) {
-      // Rank changed — remove old entry from old rank, add to new rank
-      if (previousMember) {
-        await this.cache.zrem(`leaderboard:${previousRankId}:score`, previousMember);
-      } else {
-        // Cleanup any stale duplicates from old rank (e.g. first call after deploy)
-        await this.cache.zremByUser(`leaderboard:${previousRankId}:score`, userId);
-      }
+      // Rank changed — remove old entries from old rank, add to new rank
+      await this.cache.zremByUser(`leaderboard:${previousRankId}:score`, userId);
       await this.cache.zadd(`leaderboard:${newRank.id}:score`, Number(user.stats.score), newMember);
 
       await this.eventBus.publish(new RankUpgraded(userId, previousRankId, newRank.id));
     } else {
-      // Same rank — remove old entry, add updated one
-      if (previousMember) {
-        await this.cache.zrem(`leaderboard:${newRank.id}:score`, previousMember);
-      } else {
-        // Cleanup any stale duplicates (e.g. first call after deploy)
-        await this.cache.zremByUser(`leaderboard:${newRank.id}:score`, userId);
-      }
+      // Same rank — remove all existing entries for this user, then add updated one
+      await this.cache.zremByUser(`leaderboard:${newRank.id}:score`, userId);
       await this.cache.zadd(`leaderboard:${newRank.id}:score`, Number(user.stats.score), newMember);
     }
+
     await this.cache.set(`user:${userId}:rank`, newRank.id, 0);
     await this.cache.set(`user:${userId}:member`, newMember, 0);
   }

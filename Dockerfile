@@ -13,8 +13,8 @@ COPY libs/application/package.json ./libs/application/
 COPY libs/infrastructure/package.json ./libs/infrastructure/
 COPY libs/shared/package.json ./libs/shared/
 
-# Cache-bust: 2026-05-02-v3
-RUN pnpm install --frozen-lockfile
+# Cache-bust: 2026-06-13-v1
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
 # ── Stage: builder ────────────────────────────────────────────────────────────
 FROM deps AS builder

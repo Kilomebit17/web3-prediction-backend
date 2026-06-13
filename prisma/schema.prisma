@@ -135,7 +135,9 @@ model User {
   transactions       Transaction[]
   referralsGiven     Referral[]           @relation("ReferrerRelation")
   referralReceived   Referral?            @relation("ReferredRelation")
+  leaderboardEntries LeaderboardSnapshot[]
   paymentIntents     PaymentIntent[]
+  auditLogs          AuditLog[]
 
   // ROADMAP §2.2.1 — required indexes
   @@index([score(sort: Desc)])
@@ -200,6 +202,7 @@ model Bet {
 
   user   User       @relation(fields: [userId], references: [id])
   coin   Coin       @relation(fields: [coinId], references: [id])
+  events BetEvent[]
 
   // ROADMAP §2.2.2 — partial index for active bets handled in raw SQL migration
   @@index([userId, status])
@@ -208,7 +211,22 @@ model Bet {
   @@map("bets")
 }
 
-// ─── TABLE 5: subscriptions ───────────────────────────────────────────────────
+// ─── TABLE 5: bet_events ──────────────────────────────────────────────────────
+
+model BetEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  betId     String   @map("bet_id") @db.Uuid
+  type      String   @db.VarChar(32)
+  payload   Json     @default("{}")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  bet Bet @relation(fields: [betId], references: [id])
+
+  @@index([betId, createdAt])
+  @@map("bet_events")
+}
+
+// ─── TABLE 6: subscriptions ───────────────────────────────────────────────────
 
 model Subscription {
   id          String               @id @db.VarChar(64)
@@ -309,7 +327,39 @@ model Referral {
   @@map("referrals")
 }
 
-// ─── TABLE 10: deposit_packages ──────────────────────────────────────────────
+// ─── TABLE 10: leaderboard_snapshots ─────────────────────────────────────────
+
+model LeaderboardSnapshot {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  period    String   @db.VarChar(16)
+  position  Int
+  score     BigInt
+  balance   Decimal  @db.Decimal(20, 4)
+  snappedAt DateTime @default(now()) @map("snapped_at") @db.Timestamptz
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([period, position])
+  @@index([userId, period])
+  @@map("leaderboard_snapshots")
+}
+
+// ─── TABLE 11: ranks ─────────────────────────────────────────────────────────
+
+model Rank {
+  id         String   @id @db.VarChar(16)
+  name       String   @db.VarChar(32)
+  minBalance Decimal  @map("min_balance") @db.Decimal(20, 4)
+  tierOrder  Int      @map("tier_order")
+  iconUrl    String?  @map("icon_url") @db.VarChar(512)
+  gifUrl     String?  @map("gif_url") @db.VarChar(512)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("ranks")
+}
+
+// ─── TABLE 12: deposit_packages ──────────────────────────────────────────────
 
 model DepositPackage {
   id           String   @id @default(uuid()) @db.Uuid
@@ -367,4 +417,23 @@ model PriceCandle {
 
   @@id([coinId, interval, openTime])
   @@map("price_candles")
+}
+
+// ─── TABLE 13: audit_log ─────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String   @map("actor_id") @db.Uuid
+  action     String   @db.VarChar(64)
+  targetType String?  @map("target_type") @db.VarChar(32)
+  targetId   String?  @map("target_id") @db.VarChar(64)
+  payload    Json     @default("{}")
+  ipAddress  String?  @map("ip_address") @db.VarChar(64)
+  userAgent  String?  @map("user_agent") @db.VarChar(512)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([actorId, createdAt])
+  @@map("audit_log")
 }

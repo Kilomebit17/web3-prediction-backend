@@ -149,13 +149,6 @@ export class PlaceBetUseCase {
       await this.userRepo.update(user);
       await this.txRepo.create(tx);
 
-      // Bet event
-      await this.cache.set(
-        `bet_event:${bet.id}:placed`,
-        JSON.stringify({ type: 'placed', ts: new Date().toISOString() }),
-        86400,
-      );
-
       return bet;
     });
 
@@ -187,11 +180,6 @@ export class PlaceBetUseCase {
     // 6c. Schedule resolution (critical — but worker recovers on restart via findExpiredActive)
     this.queue.scheduleBetResolution(bet.id, bet.durationSeconds).catch((err) => {
       console.error(`[PlaceBet] Failed to schedule resolution for bet=${bet.id}:`, err?.message);
-    });
-
-    // 6d. Redis: active bets list
-    this.cache.lpush(`user:${input.userId}:active_bets`, bet.id).catch((err) => {
-      console.error('[PlaceBet] active bets lpush error:', err?.message);
     });
 
     return dto;

@@ -6,5 +6,3 @@ export * from './bet-resolved.event';
 export * from './user-balance-changed.event';
 export * from './subscription-purchased.event';
 export * from './rank-upgraded.event';
-export * from './referral-reward-earned.event';
-export * from './wallet-linked.event';

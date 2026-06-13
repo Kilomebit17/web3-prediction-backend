@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { Money, SubscriptionPurchased, UserBalanceChanged } from '@pred/domain';
 import {
-  USER_REPOSITORY, UNIT_OF_WORK, EVENT_BUS, CACHE_PROVIDER,
-  type IUserRepository, type IUnitOfWork, type IEventBus, type ICacheProvider,
+  USER_REPOSITORY, UNIT_OF_WORK, EVENT_BUS,
+  type IUserRepository, type IUnitOfWork, type IEventBus,
 } from '../../ports';
 
 export interface PurchaseSubscriptionInput {
@@ -40,7 +40,6 @@ export class PurchaseSubscriptionUseCase {
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(UNIT_OF_WORK) private readonly uow: IUnitOfWork,
     @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
-    @Inject(CACHE_PROVIDER) private readonly cache: ICacheProvider,
     @Inject(SUB_REPOSITORY) private readonly subRepo: ISubscriptionRepo,
   ) {}
 
@@ -76,8 +75,6 @@ export class PurchaseSubscriptionUseCase {
         userId: input.userId, subscriptionId: input.subscriptionId,
         tierId: input.tierId, durationDays: tier.durationDays,
       });
-
-      await this.cache.del(`user:${input.userId}:profile`);
 
       await this.eventBus.publish(new SubscriptionPurchased(input.userId, input.subscriptionId, input.tierId));
       await this.eventBus.publish(new UserBalanceChanged(input.userId, tier.price, 'subscription_purchase'));

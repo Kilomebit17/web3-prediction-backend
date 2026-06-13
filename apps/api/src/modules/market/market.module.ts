@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import {
-  PurchaseSubscriptionUseCase, ExpireSubscriptionsUseCase, GetSubscriptionsUseCase,
-  SUB_REPOSITORY, USER_REPOSITORY, UNIT_OF_WORK, EVENT_BUS, CACHE_PROVIDER,
+  PurchaseSubscriptionUseCase, GetSubscriptionsUseCase,
+  SUB_REPOSITORY, USER_REPOSITORY, UNIT_OF_WORK, EVENT_BUS,
 } from '@pred/application';
 import {
   UserRepository, PrismaUnitOfWork, InMemoryEventBus,
-  SubscriptionRepository, RedisCacheService,
+  SubscriptionRepository,
 } from '@pred/infrastructure';
 import { AuthModule } from '../auth/auth.module';
 import { MarketController } from './market.controller';
@@ -15,14 +15,11 @@ import { MarketController } from './market.controller';
   controllers: [MarketController],
   providers: [
     PurchaseSubscriptionUseCase,
-    ExpireSubscriptionsUseCase,
     GetSubscriptionsUseCase,
-    SubscriptionRepository,
     { provide: SUB_REPOSITORY, useClass: SubscriptionRepository },
     { provide: USER_REPOSITORY, useClass: UserRepository },
     { provide: UNIT_OF_WORK, useClass: PrismaUnitOfWork },
     { provide: EVENT_BUS, useClass: InMemoryEventBus },
-    { provide: CACHE_PROVIDER, useExisting: RedisCacheService },
   ],
 })
 export class MarketModule {}

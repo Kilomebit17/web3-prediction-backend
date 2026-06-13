@@ -63,22 +63,6 @@ export class RedisCacheService implements ICacheProvider, OnModuleInit, OnModule
     return result === 1;
   }
 
-  async sadd(key: string, member: string): Promise<void> {
-    await this.ensureClient().sadd(key, member);
-  }
-
-  async srem(key: string, member: string): Promise<void> {
-    await this.ensureClient().srem(key, member);
-  }
-
-  async smembers(key: string): Promise<string[]> {
-    return this.ensureClient().smembers(key);
-  }
-
-  async lpush(key: string, value: string): Promise<void> {
-    await this.ensureClient().lpush(key, value);
-  }
-
   async zadd(key: string, score: number, member: string): Promise<void> {
     await this.ensureClient().zadd(key, score, member);
   }
@@ -89,10 +73,6 @@ export class RedisCacheService implements ICacheProvider, OnModuleInit, OnModule
 
   async zcard(key: string): Promise<number> {
     return this.ensureClient().zcard(key);
-  }
-
-  async zrange(key: string, start: number, stop: number): Promise<string[]> {
-    return this.ensureClient().zrange(key, start, stop);
   }
 
   async zrevrange(key: string, start: number, stop: number): Promise<string[]> {

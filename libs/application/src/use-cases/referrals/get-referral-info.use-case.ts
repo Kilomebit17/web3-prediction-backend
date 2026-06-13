@@ -5,13 +5,6 @@ export interface GetReferralInfoInput {
   userId: string;
 }
 
-export interface ReferralInvitee {
-  userId: string;
-  username: string | null;
-  joinedAt: string;
-  totalBets: number;
-}
-
 @Injectable()
 export class GetReferralInfoUseCase {
   constructor(
@@ -33,23 +26,5 @@ export class GetReferralInfoUseCase {
       inviteesCount: count,
       totalEarned: '0',
     };
-  }
-
-  async getInvitees(input: {
-    userId: string;
-    cursor?: string;
-  }): Promise<{
-    data: ReferralInvitee[];
-    meta: { nextCursor: string | null };
-  }> {
-    const invitees = await this.userRepo.findByReferrerId(input.userId);
-    const data: ReferralInvitee[] = invitees.map((u) => ({
-      userId: u.id,
-      username: u.username,
-      joinedAt: u.createdAt.toISOString(),
-      totalBets: u.stats.totalWins + u.stats.totalLosses,
-    }));
-
-    return { data, meta: { nextCursor: null } };
   }
 }

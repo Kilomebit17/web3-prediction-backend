@@ -5,18 +5,14 @@ import {
   HttpCode,
   HttpStatus,
   HttpException,
-  UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 import {
   AuthenticateWithTelegramUseCase,
   type AuthenticateWithTelegramOutput,
   RefreshTokensUseCase,
   LogoutUseCase,
-  LogoutAllUseCase,
 } from '@pred/application';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { CurrentUser, type AuthUser } from '../../common/decorators/current-user.decorator';
 import { TelegramAuthDto, TelegramAuthResponseDto } from './dto/telegram-auth.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
@@ -27,7 +23,6 @@ export class AuthController {
     private readonly authenticateUseCase: AuthenticateWithTelegramUseCase,
     private readonly refreshTokensUseCase: RefreshTokensUseCase,
     private readonly logoutUseCase: LogoutUseCase,
-    private readonly logoutAllUseCase: LogoutAllUseCase,
   ) {}
 
   @Post('telegram')
@@ -95,17 +90,6 @@ export class AuthController {
   @ApiResponse({ status: 204, description: 'Session terminated' })
   async logout(@Body() dto: RefreshTokenDto): Promise<void> {
     await this.logoutUseCase.execute({ refreshToken: dto.refreshToken });
-  }
-
-  @Post('logout-all')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth('JWT')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Logout all sessions for current user' })
-  @ApiResponse({ status: 204, description: 'All sessions terminated' })
-  @ApiResponse({ status: 401, description: 'UNAUTHENTICATED' })
-  async logoutAll(@CurrentUser() user: AuthUser): Promise<void> {
-    await this.logoutAllUseCase.execute({ userId: user.id });
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────

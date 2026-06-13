@@ -1,12 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { User } from '@pred/domain';
 import type { UserDTO } from '@pred/shared';
-import {
-  USER_REPOSITORY,
-  CACHE_PROVIDER,
-  type IUserRepository,
-  type ICacheProvider,
-} from '../../ports';
+import { USER_REPOSITORY, type IUserRepository } from '../../ports';
 import { DEPOSIT_REPO } from '../payments/create-payment-intent.use-case';
 
 export interface GetCurrentUserInput {
@@ -17,20 +12,29 @@ interface IDepositRepo {
   countCompletedDepositsByUserId(userId: string): Promise<number>;
 }
 
+interface CacheEntry {
+  data: string;
+  expiresAt: number;
+}
+
 @Injectable()
 export class GetCurrentUserUseCase {
+  private readonly profileCache = new Map<string, CacheEntry>();
+  private readonly profileTTL = 300_000; // 5 min
+
   constructor(
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(DEPOSIT_REPO) private readonly depositRepo: IDepositRepo,
-    @Inject(CACHE_PROVIDER) private readonly cache: ICacheProvider,
   ) {}
 
   async execute(input: GetCurrentUserInput): Promise<UserDTO> {
     const cacheKey = `user:${input.userId}:profile`;
 
-    // Read-through cache (ROADMAP §5.2)
-    const cached = await this.cache.get<UserDTO>(cacheKey);
-    if (cached) return cached;
+    // In-memory read-through cache
+    const cached = this.profileCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return JSON.parse(cached.data) as UserDTO;
+    }
 
     const user = await this.userRepo.findById(input.userId);
     if (!user) {
@@ -39,8 +43,12 @@ export class GetCurrentUserUseCase {
 
     const completedCount = await this.depositRepo.countCompletedDepositsByUserId(input.userId);
     const dto = this.toDto(user, completedCount === 0);
-    await this.cache.set(cacheKey, JSON.stringify(dto), 300); // TTL 5m
+    this.profileCache.set(cacheKey, { data: JSON.stringify(dto), expiresAt: Date.now() + this.profileTTL });
     return dto;
+  }
+
+  invalidate(userId: string): void {
+    this.profileCache.delete(`user:${userId}:profile`);
   }
 
   private toDto(user: User, isFirstDeposit: boolean): UserDTO {

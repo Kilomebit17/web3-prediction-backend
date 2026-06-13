@@ -2,9 +2,9 @@ import { Injectable, Inject } from '@nestjs/common';
 import { BetResolved, UserBalanceChanged, ScoreCalculator } from '@pred/domain';
 import {
   BET_REPOSITORY, USER_REPOSITORY, TRANSACTION_REPOSITORY,
-  UNIT_OF_WORK, EVENT_BUS, CACHE_PROVIDER, PRICE_PROVIDER,
+  UNIT_OF_WORK, EVENT_BUS, PRICE_PROVIDER,
   type IBetRepository, type IUserRepository, type ITransactionRepository,
-  type IUnitOfWork, type IEventBus, type ICacheProvider, type IPriceProvider,
+  type IUnitOfWork, type IEventBus, type IPriceProvider,
 } from '../../ports';
 
 export interface ResolveBetInput {
@@ -21,7 +21,6 @@ export class ResolveBetUseCase {
     @Inject(TRANSACTION_REPOSITORY) private readonly txRepo: ITransactionRepository,
     @Inject(UNIT_OF_WORK) private readonly uow: IUnitOfWork,
     @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
-    @Inject(CACHE_PROVIDER) private readonly cache: ICacheProvider,
     @Inject(PRICE_PROVIDER) private readonly priceProvider: IPriceProvider,
   ) {}
 
@@ -71,10 +70,6 @@ export class ResolveBetUseCase {
       }
 
       await this.userRepo.update(user);
-
-      // Redis cache invalidation
-      await this.cache.set(`user:${bet.userId}:profile`, '', 1);
-      await this.cache.lpush(`user:${bet.userId}:resolved_bets`, bet.id);
 
       // Events
       await this.eventBus.publish(

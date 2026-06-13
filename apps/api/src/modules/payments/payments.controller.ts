@@ -1,5 +1,5 @@
 import {
-  Controller, Get, Post, Param, Body, Headers,
+  Controller, Get, Post, Body, Headers,
   HttpCode, HttpStatus, HttpException, UseGuards, Inject,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
@@ -57,36 +57,6 @@ export class PaymentsController {
     });
   }
 
-  @Get('intents/:id')
-  @ApiBearerAuth('JWT')
-  @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Get payment intent status' })
-  async getIntent(@Param('id') id: string): Promise<PaymentIntentDTO> {
-    const intent = await this.depositRepo.findIntentById(id);
-    if (!intent) throw new HttpException(
-      { type: 'https://pred.game/errors/not-found', title: 'Intent not found', status: 404, code: 'NOT_FOUND' }, 404);
-    return intent;
-  }
-
-  // TODO Phase 3: Real Stripe integration — signature verification, idempotency
-  @Post('webhook/stripe')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Stripe webhook handler (future)' })
-  async stripeWebhook(
-    @Body() body: { type: string; data: { object: { id: string; metadata?: { intentId?: string } } } },
-    @Headers('stripe-signature') _signature: string,
-  ): Promise<void> {
-    if (body.type === 'checkout.session.completed') {
-      const intentId = body.data.object.metadata?.intentId;
-      if (intentId) {
-        await this.processCompletionUseCase.execute({
-          intentId,
-          providerIntentId: body.data.object.id,
-        });
-      }
-    }
-  }
-
   @Post('webhook/telegram')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Telegram webhook handler (Stars payments)' })
@@ -124,11 +94,4 @@ export class PaymentsController {
 
     return { ok: true };
   }
-
-  // TODO Phase 3.5: TON on-chain deposit listener — monitor TON wallet for incoming transfers
-  @Post('webhook/ton')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'TON payment webhook handler (future)' })
-  async tonWebhook(@Body() _body: unknown): Promise<void> {}
-
 }

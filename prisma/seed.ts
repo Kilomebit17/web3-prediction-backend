@@ -1,4 +1,4 @@
-// ROADMAP §1.3: Seed — coins, subscriptions (with tiers), ranks, deposit_packages
+// ROADMAP §1.3: Seed — coins, subscriptions (with tiers), deposit_packages
 
 import { PrismaClient } from '@prisma/client';
 
@@ -24,7 +24,6 @@ async function main(): Promise<void> {
   console.log('🌱 Seeding database...');
 
   await seedCoins();
-  await seedRanks();
   await seedSubscriptions();
   await seedDepositPackages();
 
@@ -43,22 +42,6 @@ async function seedCoins(): Promise<void> {
     coins.map((coin) => prisma.coin.upsert({ where: { id: coin.id }, create: coin, update: coin })),
   );
   console.log(`  ✓ ${coins.length} coins seeded`);
-}
-
-// ─── RANKS ────────────────────────────────────────────────────────────────────
-async function seedRanks(): Promise<void> {
-  const ranks = [
-    { id: 'j1', name: 'J-1', minBalance: 0,        tierOrder: 1 },
-    { id: 'e2', name: 'E-2', minBalance: 1000,      tierOrder: 2 },
-    { id: 's3', name: 'S-3', minBalance: 100000,    tierOrder: 3 },
-    { id: 'u4', name: 'U-4', minBalance: 1000000,   tierOrder: 4 },
-    { id: 's5', name: 'S-5', minBalance: 3000000,   tierOrder: 5 },
-  ];
-
-  await Promise.all(
-    ranks.map((rank) => prisma.rank.upsert({ where: { id: rank.id }, create: rank, update: rank })),
-  );
-  console.log(`  ✓ ${ranks.length} ranks seeded`);
 }
 
 // ─── SUBSCRIPTIONS + TIERS ────────────────────────────────────────────────────

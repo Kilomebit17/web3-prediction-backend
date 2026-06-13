@@ -79,30 +79,37 @@ export class GetLeaderboardUseCase {
     if (!cachedRankId) return null;
 
     const key = leaderboardKey(cachedRankId);
-    const members = await this.cache.zrevrange(key, 0, -1);
-    const idx = members.findIndex((m) => m.startsWith(`${userId}:`));
-    if (idx === -1) return null;
+    const member = await this.cache.get<string>(`user:${userId}:member`);
+    if (!member) return null;
 
-    const entryParts = members[idx]?.split(':') ?? [];
+    const position = await this.cache.zrevrank(key, member);
+    if (position === null) return null;
+
+    const idx = position;
+
+    const parts = member.split(':');
     const entry: LeaderboardEntry = {
-      userId: entryParts[0] ?? '',
-      username: entryParts[1] || null,
-      score: entryParts[2] ?? '0',
-      balance: entryParts[3] ?? '0',
+      userId: parts[0] ?? '',
+      username: parts[1] || null,
+      score: parts[2] ?? '0',
+      balance: parts[3] ?? '0',
       position: idx + 1,
       rankId: cachedRankId,
     };
 
     const neighbors: LeaderboardEntry[] = [];
-    for (let i = Math.max(0, idx - 2); i <= Math.min(members.length - 1, idx + 2); i++) {
-      if (i === idx) continue;
-      const parts = members[i]?.split(':') ?? [];
+    const start = Math.max(0, idx - 2);
+    const stop = idx + 2;
+    const neighborMembers = await this.cache.zrevrange(key, start, stop);
+    for (let i = 0; i < neighborMembers.length; i++) {
+      if (start + i === idx) continue;
+      const nParts = neighborMembers[i]?.split(':') ?? [];
       neighbors.push({
-        userId: parts[0] ?? '',
-        username: parts[1] || null,
-        score: parts[2] ?? '0',
-        balance: parts[3] ?? '0',
-        position: i + 1,
+        userId: nParts[0] ?? '',
+        username: nParts[1] || null,
+        score: nParts[2] ?? '0',
+        balance: nParts[3] ?? '0',
+        position: start + i + 1,
         rankId: cachedRankId,
       });
     }

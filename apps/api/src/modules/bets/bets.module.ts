@@ -34,7 +34,6 @@ import { PricesGateway, UserGateway } from './ws.gateway';
     { provide: SUB_REPOSITORY, useClass: SubscriptionRepository },
     { provide: REFERRAL_REPO, useClass: ReferralRepository },
     { provide: COIN_REPOSITORY, useClass: CoinRepository },
-    CoinRepository,
     PricesGateway, UserGateway,
   ],
 })

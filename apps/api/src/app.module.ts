@@ -11,7 +11,6 @@ import { MarketModule } from './modules/market/market.module';
 import { LeaderboardModule } from './modules/leaderboard/leaderboard.module';
 import { ReferralsModule } from './modules/referrals/referrals.module';
 import { PaymentsModule } from './modules/payments/payments.module';
-import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -35,7 +34,6 @@ import { AdminModule } from './modules/admin/admin.module';
     LeaderboardModule,
     ReferralsModule,
     PaymentsModule,
-    AdminModule,
   ],
 })
 export class AppModule {}

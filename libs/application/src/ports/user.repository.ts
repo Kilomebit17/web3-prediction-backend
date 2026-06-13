@@ -9,7 +9,6 @@ export interface IUserRepository {
   create(user: User): Promise<void>;
   update(user: User): Promise<void>;
   findByIds(ids: string[]): Promise<User[]>;
-  findByReferrerId(referrerId: string): Promise<User[]>;
   countByReferrerId(referrerId: string): Promise<number>;
 }
 

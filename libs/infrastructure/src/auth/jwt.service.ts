@@ -115,8 +115,7 @@ export class JwtService implements OnModuleInit, IAuthTokenService {
       expiresIn: this.refreshTTL,
     });
 
-    // Redis allow-list
-    await this.cache.sadd(`session:${userId}`, tokenJti);
+    // Redis allow-list: track JTI for rotation + reuse detection
     await this.cache.set(`refresh_token:${tokenJti}`, userId, this.refreshTTL);
 
     return token;
@@ -139,32 +138,16 @@ export class JwtService implements OnModuleInit, IAuthTokenService {
     // Check allow-list (reuse detection)
     const exists = await this.cache.exists(`refresh_token:${payload.jti}`);
     if (!exists) {
-      // Token reuse detected — invalidate all user sessions
-      await this.invalidateAllSessions(payload.sub);
       throw new TokenReuseError();
     }
 
     // Rotation: delete the used token
     await this.cache.del(`refresh_token:${payload.jti}`);
-    await this.cache.srem(`session:${payload.sub}`, payload.jti);
 
     return payload;
   }
 
-  async logout(jti: string, userId: string): Promise<void> {
+  async logout(jti: string, _userId: string): Promise<void> {
     await this.cache.del(`refresh_token:${jti}`);
-    await this.cache.srem(`session:${userId}`, jti);
-  }
-
-  async logoutAll(userId: string): Promise<void> {
-    await this.invalidateAllSessions(userId);
-  }
-
-  private async invalidateAllSessions(userId: string): Promise<void> {
-    const jtis = await this.cache.smembers(`session:${userId}`);
-    for (const jti of jtis) {
-      await this.cache.del(`refresh_token:${jti}`);
-    }
-    await this.cache.del(`session:${userId}`);
   }
 }

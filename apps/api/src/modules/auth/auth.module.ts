@@ -4,9 +4,6 @@ import {
   TelegramInitDataVerifier,
   JwtService,
   UserRepository,
-  BetRepository,
-  TransactionRepository,
-  CoinRepository,
   ReferralRepository,
   PrismaUnitOfWork,
   InMemoryEventBus,
@@ -16,7 +13,6 @@ import {
   AuthenticateWithTelegramUseCase,
   RefreshTokensUseCase,
   LogoutUseCase,
-  LogoutAllUseCase,
   REFERRAL_REPO,
   USER_REPOSITORY,
   UNIT_OF_WORK,
@@ -35,7 +31,6 @@ import { AuthController } from './auth.controller';
     AuthenticateWithTelegramUseCase,
     RefreshTokensUseCase,
     LogoutUseCase,
-    LogoutAllUseCase,
 
     // Port → Adapter bindings
     { provide: USER_REPOSITORY, useClass: UserRepository },
@@ -56,11 +51,6 @@ import { AuthController } from './auth.controller';
     // JWT service
     { provide: AUTH_TOKEN_SERVICE, useClass: JwtService },
 
-    // Repository adapters (needed for user lookup within use case)
-    UserRepository,
-    BetRepository,
-    TransactionRepository,
-    CoinRepository,
     { provide: REFERRAL_REPO, useClass: ReferralRepository },
   ],
   exports: [

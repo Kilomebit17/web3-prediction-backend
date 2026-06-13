@@ -79,15 +79,6 @@ export class UserRepository implements IUserRepository {
     return rows.map((r) => this.toDomain(r));
   }
 
-  async findByReferrerId(referrerId: string): Promise<User[]> {
-    const rows = await this.prisma.user.findMany({
-      where: { referredById: referrerId },
-      include: { wallets: true },
-      orderBy: { createdAt: 'desc' },
-    });
-    return rows.map((r) => this.toDomain(r));
-  }
-
   async countByReferrerId(referrerId: string): Promise<number> {
     return this.prisma.user.count({ where: { referredById: referrerId } });
   }

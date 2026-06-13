@@ -23,7 +23,6 @@ import { PaymentsController } from './payments.controller';
     { provide: USER_REPOSITORY, useClass: UserRepository },
     { provide: TRANSACTION_REPOSITORY, useClass: TransactionRepository },
     { provide: EVENT_BUS, useClass: InMemoryEventBus },
-    DepositRepository,
   ],
 })
 export class PaymentsModule {}

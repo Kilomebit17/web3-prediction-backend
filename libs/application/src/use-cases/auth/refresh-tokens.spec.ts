@@ -32,7 +32,6 @@ function setupMocks() {
       create: jest.fn(),
       update: jest.fn(),
       findByIds: jest.fn(),
-      findByReferrerId: jest.fn(),
       countByReferrerId: jest.fn(),
     } as jest.Mocked<IUserRepository>,
 
@@ -43,7 +42,6 @@ function setupMocks() {
       signRefreshToken: jest.fn(),
       verifyAccessToken: jest.fn(),
       logout: jest.fn(),
-      logoutAll: jest.fn(),
     } as jest.Mocked<IAuthTokenService>,
   };
 }

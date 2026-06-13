@@ -6,7 +6,6 @@ import {
   TransactionRepository,
   CoinRepository,
   BinancePriceProvider,
-  RedisCacheService,
   InMemoryEventBus,
 } from '@pred/infrastructure';
 import { ResolveBetUseCase } from '@pred/application';
@@ -14,9 +13,6 @@ import { ResolveBetUseCase } from '@pred/application';
 export async function startBetResolveProcessor(bullMq: BullMqService): Promise<void> {
   const prisma = new PrismaService();
   await prisma.onModuleInit();
-
-  const redis = new RedisCacheService();
-  redis.onModuleInit();
 
   const userRepo = new UserRepository(prisma);
   const betRepo = new BetRepository(prisma);
@@ -29,9 +25,8 @@ export async function startBetResolveProcessor(bullMq: BullMqService): Promise<v
     betRepo,
     userRepo,
     txRepo,
-    { withTransaction: (work) => prisma.$transaction(work) },
+    { withTransaction: <T>(work: () => Promise<T>) => prisma.$transaction(work as any) as Promise<T> },
     eventBus,
-    redis,
     priceProvider,
   );
 
@@ -54,7 +49,6 @@ export async function startBetResolveProcessor(bullMq: BullMqService): Promise<v
 
   process.on('SIGTERM', async () => {
     await worker.close();
-    await redis.onModuleDestroy();
     await prisma.onModuleDestroy();
   });
 }

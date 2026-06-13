@@ -5,12 +5,10 @@ import {
   USER_REPOSITORY,
   UNIT_OF_WORK,
   EVENT_BUS,
-  CACHE_PROVIDER,
   type IBetRepository,
   type IUserRepository,
   type IUnitOfWork,
   type IEventBus,
-  type ICacheProvider,
 } from '../../ports';
 import type { BetDTO } from './place-bet.use-case';
 
@@ -26,7 +24,6 @@ export class CancelBetUseCase {
     @Inject(USER_REPOSITORY) private readonly userRepo: IUserRepository,
     @Inject(UNIT_OF_WORK) private readonly uow: IUnitOfWork,
     @Inject(EVENT_BUS) private readonly eventBus: IEventBus,
-    @Inject(CACHE_PROVIDER) private readonly cache: ICacheProvider,
   ) {}
 
   async execute(input: CancelBetInput): Promise<BetDTO> {
@@ -57,9 +54,6 @@ export class CancelBetUseCase {
         });
         await this.userRepo.update(user);
       }
-
-      // Invalidate cache
-      await this.cache.del(`user:${input.userId}:profile`);
 
       // Events
       await this.eventBus.publish(

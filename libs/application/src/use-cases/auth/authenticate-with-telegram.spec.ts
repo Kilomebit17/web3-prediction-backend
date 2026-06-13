@@ -82,7 +82,6 @@ function setupMocks() {
       findByUsername: jest.fn(),
       save: jest.fn(),
       findByIds: jest.fn(),
-      findByReferrerId: jest.fn(),
       countByReferrerId: jest.fn(),
     } as jest.Mocked<IUserRepository>,
 
@@ -101,7 +100,6 @@ function setupMocks() {
       verifyAccessToken: jest.fn(),
       verifyRefreshToken: jest.fn(),
       logout: jest.fn(),
-      logoutAll: jest.fn(),
     } as jest.Mocked<IAuthTokenService>,
 
     eventBus: {
@@ -115,14 +113,9 @@ function setupMocks() {
       set: jest.fn<Promise<void>, [string, string, number?]>(),
       get: jest.fn(),
       del: jest.fn(),
-      sadd: jest.fn(),
-      srem: jest.fn(),
-      smembers: jest.fn(),
-      lpush: jest.fn(),
       zadd: jest.fn(),
       zrem: jest.fn(),
       zcard: jest.fn(),
-      zrange: jest.fn(),
       zrevrange: jest.fn(),
     } as jest.Mocked<ICacheProvider>,
 

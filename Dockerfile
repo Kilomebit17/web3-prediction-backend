@@ -1,4 +1,5 @@
 # ── Stage: deps ──────────────────────────────────────────────────────────────
+# Force rebuild: 2026-06-13-16-35
 FROM node:22-alpine AS deps
 
 WORKDIR /app

@@ -14,7 +14,7 @@ COPY libs/infrastructure/package.json ./libs/infrastructure/
 COPY libs/shared/package.json ./libs/shared/
 
 # Cache-bust: 2026-06-13-v1
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile
 
 # ── Stage: builder ────────────────────────────────────────────────────────────
 FROM deps AS builder

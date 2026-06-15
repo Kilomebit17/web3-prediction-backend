@@ -16,6 +16,7 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:seed": "ts-node --project tsconfig.seed.json prisma/seed.ts",
+    "prisma:reset-redis": "node libs/infrastructure/scripts/reset-redis.mjs",
     "prisma:studio": "prisma studio"
   },
   "dependencies": {
